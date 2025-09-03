@@ -141,5 +141,6 @@ class Game:
         gui.on_execute()
 
 
-# game: Game = Game("Brondehach", TestController(50), False)
-# game.run()
+if __name__ == "__main__":
+    game: Game = Game("Brondehach", TestController(50), False)
+    game.run()

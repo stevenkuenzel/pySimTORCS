@@ -300,7 +300,7 @@ class Car:
         self.velocity.x += self.acceleration.x * dt
         self.velocity.y += self.acceleration.y * dt
 
-        self.absolute_velocity = self.velocity.magnitude()
+        self.absolute_velocity = self.velocity.length()
 
         # Calculation rotational forces.
         angular_torque = (
