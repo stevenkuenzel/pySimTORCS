@@ -2,8 +2,6 @@ import math
 from enum import Enum
 from math import atan2
 
-from shapely import Polygon
-
 from pysimtorcs.geometry import LineSegment, Vector2, create_vector2_from_rad
 
 
@@ -155,9 +153,8 @@ class Segment:
 
         return result
 
-    def to_polygon(self) -> Polygon:
-        vertices = [self.p3, self.p1, self.p2, self.p4, self.p3]
-        return Polygon([(p.x, p.y) for p in vertices])
+    def to_polygon(self) -> list[Vector2]:
+        return [self.p3, self.p1, self.p2, self.p4, self.p3]
 
     def __eq__(self, value):
         if isinstance(value, Segment):
@@ -236,9 +233,8 @@ class EdgeSegment(Segment):
 
         self.update_centers()
 
-    def to_polygon(self) -> Polygon:
-        vertices = [self.third_point, self.p1, self.p2, self.third_point]
-        return Polygon([(p.x, p.y) for p in vertices])
+    def to_polygon(self) -> list[Vector2]:
+        return [self.third_point, self.p1, self.p2, self.third_point]
 
 
 class CoordinateSegment(Segment):
@@ -298,23 +294,6 @@ class CoordinateSegment(Segment):
             inset_direction = p3_to_p4.normalize()
             self.p3 += inset_direction * inset_amount
             self.p4 -= inset_direction * inset_amount
-
-        # width_relation = self.width_end / self.width_start
-
-        # if width_relation < 1:
-        #     width_adj = (1 - width_relation) /2
-
-        #     direction = self.p4 - self.p3
-        #     direction.scale_self(width_adj)
-        #     self.p3 += direction
-        #     self.p4 -= direction
-        # elif width_relation > 1:
-        #     width_adj = (width_relation - 1) / 2
-
-        #     direction = self.p4 - self.p3
-        #     direction.scale_self(width_adj)
-        #     self.p3 -= direction
-        #     self.p4 += direction
 
         self.update_segment_lines()
         self.update_centers()

@@ -148,7 +148,8 @@ class Race:
 
         for segment_id in segments_to_check:
             segment = self.track.segments[segment_id]
-            if point_within_polygon(car.position.to_point(), segment.to_polygon()):
+
+            if point_within_polygon(car.position, segment.to_polygon()):
                 car.current_segment = segment
                 return
 
