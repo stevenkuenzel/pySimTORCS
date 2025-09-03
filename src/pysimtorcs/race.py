@@ -24,8 +24,9 @@ class Race:
         self.race_finished = False
 
     def run(self):
+        DT = 1.0 / settings.FPS
         while self.t_now < self.t_max and not self.race_finished:
-            self.update()
+            self.update(DT)
 
     def create_car(self, controller: CarController = TestController(50.0)) -> Car:
         car = Car(
