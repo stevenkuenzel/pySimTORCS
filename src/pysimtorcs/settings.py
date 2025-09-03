@@ -5,8 +5,8 @@ The maximum random deviation applied to sensor readings.
 
 
 
-FPS = 50
-DT = 1.0 / FPS
+FPS = 100
+# DT = 1.0 / FPS
 
 # Maximum and minimum speed considered (in m/s)
 SPEED_MIN = 50.0 / 3.6

@@ -1,6 +1,8 @@
 import pygame
 from pygame.locals import *
 
+import settings
+
 from geometry import create_vector2_from_rad
 from race import Race
 from segments import CoordinateSegment, TurnDirection
@@ -16,6 +18,7 @@ class App:
     def __init__(self, race: Race):
         self._running = True
         self._display_surf = None
+        self.clock = None
         self.size = self.width, self.height = 1280, 1024
         self.race = race
         self.track = race.track
@@ -24,6 +27,7 @@ class App:
 
     def on_init(self):
         pygame.init()
+        self.clock = pygame.time.Clock()
         self._display_surf = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF)
         self._display_surf.fill(WHITE)
         self._running = True
@@ -82,7 +86,9 @@ class App:
         self.on_init()
 
         while( self._running ):
-            r.update()
+            dt = self.clock.tick(settings.FPS) / 1000.0
+            r.update(dt)
+
 
             for event in pygame.event.get():
                 self.on_event(event)
@@ -93,6 +99,8 @@ class App:
             #     break
         self.on_cleanup()
  
+
+
 if __name__ == "__main__" :
     t : Track = import_from_torcs("Brondehach", 1)
     r : Race = Race(t, False)

@@ -1,5 +1,5 @@
 import math
-from geometry import LineSegment, Vector2, adjacent_point_on_segment
+from geometry import LineSegment, Vector2, adjacent_point_on_segment, point_within_polygon
 from segments import Segment
 from sensor import SensorInformation
 import settings
@@ -11,11 +11,6 @@ from util import sign
 
 
 class Race:
-
-    def __vector2_in_segment(vector: Vector2, segment: Segment) -> bool:
-        return vector.to_point().within(segment.to_polygon())
-    
-
     def __init__(self, track: Track, noise: bool, t_max: int = 6000):
         self.track = track
         self.noise = noise
@@ -24,9 +19,9 @@ class Race:
         self.t_now = 0
         self.race_finished = False
 
-    def run(self):
-        while self.t_now < self.t_max and not self.race_finished:
-            self.update()
+    # def run(self):
+    #     while self.t_now < self.t_max and not self.race_finished:
+    #         self.update()
 
     def create_car(self) -> Car:
         car = Car(self.noise, self.track.starting_angle, self.track.starting_point.copy())
@@ -34,28 +29,27 @@ class Race:
         self.cars.append(car)
         return car
 
-    def update(self):
-        for car in self.cars:
-            # print(f"Is car disqualified?: {car.disqualified}")
-            # print(f"Updating car at position: {car.position}")
+    def update(self, dt: float):
+        if self.race_finished:
+            return
 
+        for car in self.cars:
             if car.disqualified:
                 continue
 
-            self.__update_game_state(car)
-            car.update(settings.DT, self.track.length)
+            self.__update_car_state(car)
+
+            car.update(dt, self.track.length)
+
         if all(car.disqualified for car in self.cars):
             self.race_finished = True
+
         self.t_now += 1
 
         if self.t_now >= self.t_max:
             self.race_finished = True
-
-    # def update_car(self, car : Car) -> None:
-    #     self.__determine_car_segment(car)
-
     
-    def __update_game_state(self, car : Car) -> None:
+    def __update_car_state(self, car : Car) -> None:
         sensor_info : SensorInformation = car.sensor_information
         sensor_info.absolute_velocity = car.absolute_velocity
 
@@ -125,7 +119,7 @@ class Race:
 
         for segment_id in segments_to_check:
             segment = self.track.segments[segment_id]
-            if Race.__vector2_in_segment(car.position, segment):
+            if point_within_polygon(car.position.to_point(), segment.to_polygon()):
                 car.current_segment = segment
                 return
 

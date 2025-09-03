@@ -155,9 +155,3 @@ def adjacent_point_on_segment(p: Vector2, line: LineSegment) -> Vector2:
     projected_dist = line_string.project(point)
     closest_point = line_string.interpolate(projected_dist)
     return Vector2(closest_point.x, closest_point.y)
-
-
-a = Vector2(1, 2)
-b = Vector2(3, 4)
-c = a + b
-print(c)
