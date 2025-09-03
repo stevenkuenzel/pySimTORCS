@@ -3,8 +3,6 @@ MAX_RANDOM_DEVIATION = 0.1
 The maximum random deviation applied to sensor readings.
 """
 
-
-
 FPS = 100
 # DT = 1.0 / FPS
 

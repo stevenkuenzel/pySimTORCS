@@ -1,6 +1,7 @@
 import random
 
-from settings import MAX_RANDOM_DEVIATION
+from pysimtorcs.settings import MAX_RANDOM_DEVIATION
+
 
 class SensorInformation:
     """
@@ -42,12 +43,19 @@ class SensorInformation:
 
     @property
     def distance_raced(self) -> float:
-        return self.rounds_finished * self.track.length + self.lap_position + self.segment_position
+        return (
+            self.rounds_finished * self.track.length
+            + self.lap_position
+            + self.segment_position
+        )
 
     def perturb_if_necessary(self):
         if self.noise:
             for index in range(len(self.track_edge_sensors)):
                 actual_value = self.track_edge_sensors[index]
-                perturbed_value = actual_value + MAX_RANDOM_DEVIATION * (self._random.random() - 0.5) * 2.0
+                perturbed_value = (
+                    actual_value
+                    + MAX_RANDOM_DEVIATION * (self._random.random() - 0.5) * 2.0
+                )
                 perturbed_value = min(max(perturbed_value, 0.0), 1.0)
                 self.track_edge_sensors[index] = perturbed_value

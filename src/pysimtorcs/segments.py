@@ -1,9 +1,11 @@
-from math import atan2
 import math
+from enum import Enum
+from math import atan2
 
 from shapely import Polygon
-from geometry import LineSegment, Vector2, create_vector2_from_rad
-from enum import Enum
+
+from pysimtorcs.geometry import LineSegment, Vector2, create_vector2_from_rad
+
 
 class TurnDirection(Enum):
     Left = 1
@@ -12,17 +14,18 @@ class TurnDirection(Enum):
 
 
 class Turn:
-    MAX_TURN_SEGMENT_LENGTH_SQR : float = 2500
-    def __init__(self, id:int, first_segment: "CoordinateSegment"):
+    MAX_TURN_SEGMENT_LENGTH_SQR: float = 2500
+
+    def __init__(self, id: int, first_segment: "CoordinateSegment"):
         self.id = id
 
-        self.length :float = 0
-        self.angle:float = 0
-        self.speed_max:float = 100
+        self.length: float = 0
+        self.angle: float = 0
+        self.speed_max: float = 100
 
-        self.direction : TurnDirection = first_segment.turn_direction
+        self.direction: TurnDirection = first_segment.turn_direction
 
-        self.segments : list[Segment] = []
+        self.segments: list[Segment] = []
         self.add_segment(first_segment)
 
     def add_segment(self, segment: "Segment"):
@@ -40,18 +43,18 @@ class Turn:
 
 
 class Segment:
-    """An abstract base class for all track segments.
-    """
-    def __init__(self, previous : "Segment"):
+    """An abstract base class for all track segments."""
+
+    def __init__(self, previous: "Segment"):
         """Initializes a new segment.
 
         Args:
             previous (Segment): The previous segment in the track.
             track (Track): The track this segment belongs to.
         """
-        self.previous : Segment = previous
-        
-        self.id : int = -1
+        self.previous: Segment = previous
+
+        self.id: int = -1
         """The unique identifier for this segment.
         """
 
@@ -62,55 +65,52 @@ class Segment:
         # | str |
         # |-----|
         # p1   p2
-        
-        self.p1 : Vector2 = Vector2()
+
+        self.p1: Vector2 = Vector2()
         """Position: Start, left side.
         """
-        self.p2 : Vector2 = Vector2()
+        self.p2: Vector2 = Vector2()
         """Position: Start, right side.
         """
-        self.p3 : Vector2 = Vector2()
+        self.p3: Vector2 = Vector2()
         """Position: End, left side.
         """
-        self.p4 : Vector2 = Vector2()
+        self.p4: Vector2 = Vector2()
         """Position: End, right side.
         """
 
-        self.center_start : Vector2 = Vector2()
-        self.center_end : Vector2 = Vector2()
+        self.center_start: Vector2 = Vector2()
+        self.center_end: Vector2 = Vector2()
 
-        self.segment_lines : list[LineSegment] = []
+        self.segment_lines: list[LineSegment] = []
 
-        self.next_turn : Turn = None
-        self.in_turn : Turn = None
+        self.next_turn: Turn = None
+        self.in_turn: Turn = None
 
-        self.axis : LineSegment = None
+        self.axis: LineSegment = None
 
         # in rad
-        self.segment_angle : float = 0
-        self.segment_direction : Vector2 = Vector2()
+        self.segment_angle: float = 0
+        self.segment_direction: Vector2 = Vector2()
 
-        self.length_measured : float = 0
-        self.length_track_total : float = 0
-        self.width_start : float = 0
-        self.width_end : float = 0
+        self.length_measured: float = 0
+        self.length_track_total: float = 0
+        self.width_start: float = 0
+        self.width_end: float = 0
 
-        self.x_min : float = float('inf')
-        self.x_max : float = float('-inf')
-        self.y_min : float = float('inf')
-        self.y_max : float = float('-inf')
-
+        self.x_min: float = float("inf")
+        self.x_max: float = float("-inf")
+        self.y_min: float = float("inf")
+        self.y_max: float = float("-inf")
 
     def update_segment_lines(self):
-        """Creates / Updates the segment lines for this segment.
-        """
+        """Creates / Updates the segment lines for this segment."""
         self.segment_lines.clear()
         self.segment_lines.append(LineSegment(self.p1, self.p3))
         self.segment_lines.append(LineSegment(self.p2, self.p4))
 
     def update_centers(self):
-        """Updates the center points for this segment. Also updates the axis line, segment direction, angle, length and widths.
-        """
+        """Updates the center points for this segment. Also updates the axis line, segment direction, angle, length and widths."""
         self.center_start = (self.p1 + self.p2) / 2
         self.center_end = (self.p3 + self.p4) / 2
 
@@ -123,29 +123,38 @@ class Segment:
         self.width_start = self.p2.distance(self.p1)
         self.width_end = self.p4.distance(self.p3)
 
-
     def determine_min_max(self):
         self.x_min = min(self.x_min, self.p1.x, self.p2.x, self.p3.x, self.p4.x)
         self.x_max = max(self.x_max, self.p1.x, self.p2.x, self.p3.x, self.p4.x)
         self.y_min = min(self.y_min, self.p1.y, self.p2.y, self.p3.y, self.p4.y)
         self.y_max = max(self.y_max, self.p1.y, self.p2.y, self.p3.y, self.p4.y)
 
-    def get_normalized_line_segments(self, x_min : float, x_max :float, y_min : float, y_max : float) -> list[LineSegment]:
-        result : list[LineSegment] = []
+    def get_normalized_line_segments(
+        self, x_min: float, x_max: float, y_min: float, y_max: float
+    ) -> list[LineSegment]:
+        result: list[LineSegment] = []
 
         for line_segment in self.segment_lines:
             from_new = Vector2(
-                x=(line_segment.from_point.x - x_min) / (x_max - x_min) if (x_max - x_min) != 0 else 0,
-                y=(line_segment.from_point.y - y_min) / (y_max - y_min) if (y_max - y_min) != 0 else 0
+                x=(line_segment.from_point.x - x_min) / (x_max - x_min)
+                if (x_max - x_min) != 0
+                else 0,
+                y=(line_segment.from_point.y - y_min) / (y_max - y_min)
+                if (y_max - y_min) != 0
+                else 0,
             )
             to_new = Vector2(
-                x=(line_segment.to_point.x - x_min) / (x_max - x_min) if (x_max - x_min) != 0 else 0,
-                y=(line_segment.to_point.y - y_min) / (y_max - y_min) if (y_max - y_min) != 0 else 0
+                x=(line_segment.to_point.x - x_min) / (x_max - x_min)
+                if (x_max - x_min) != 0
+                else 0,
+                y=(line_segment.to_point.y - y_min) / (y_max - y_min)
+                if (y_max - y_min) != 0
+                else 0,
             )
             result.append(LineSegment(from_new, to_new))
 
         return result
-    
+
     def to_polygon(self) -> Polygon:
         vertices = [self.p3, self.p1, self.p2, self.p4, self.p3]
         return Polygon([(p.x, p.y) for p in vertices])
@@ -154,11 +163,12 @@ class Segment:
         if isinstance(value, Segment):
             return self.id == value.id
         return False
-    
+
     def __hash__(self):
         return hash(self.id)
 
-#Last segment of a track, connecting its end and starting segments.
+
+# Last segment of a track, connecting its end and starting segments.
 class ConnectingSegment(Segment):
     def __init__(self, from_segment: Segment, to_segment: Segment):
         super().__init__(from_segment)
@@ -170,6 +180,7 @@ class ConnectingSegment(Segment):
 
         self.update_segment_lines()
         self.update_centers()
+
 
 # Connects two coordinate segments with deviating directions.
 # The segment has only three points. The third point depends on the turn direction and is one of the starting points of the _to_ segment.
@@ -185,6 +196,7 @@ class ConnectingSegment(Segment):
 
 #  OR:
 
+
 # (p3)  p4
 #     /|
 #    / |
@@ -193,12 +205,13 @@ class ConnectingSegment(Segment):
 # /----|
 # p1   p2
 class EdgeSegment(Segment):
-    def __init__(self, from_segment: Segment, to_segment: Segment, turn_direction: TurnDirection):
+    def __init__(
+        self, from_segment: Segment, to_segment: Segment, turn_direction: TurnDirection
+    ):
         super().__init__(from_segment)
 
-        self.to_segment :Segment = to_segment
-        self.turn_direction : TurnDirection = turn_direction
-
+        self.to_segment: Segment = to_segment
+        self.turn_direction: TurnDirection = turn_direction
 
         # DO NOT COPY POINTS HERE. USE REFERENCES.
         self.p1 = from_segment.p3
@@ -214,39 +227,49 @@ class EdgeSegment(Segment):
         elif turn_direction == TurnDirection.Left:
             self.p3 = to_segment.p1
             self.p4 = self.p2
-            
+
             self.third_point = self.p3
 
             self.segment_lines.append(LineSegment(self.p1, self.p3))
         else:
             raise ValueError("EdgeSegment must have a turn direction of Left or Right")
-        
+
         self.update_centers()
-    
+
     def to_polygon(self) -> Polygon:
         vertices = [self.third_point, self.p1, self.p2, self.third_point]
         return Polygon([(p.x, p.y) for p in vertices])
 
-class CoordinateSegment (Segment):
-    def __init__(self, length : float, width_end:float, turn_angle : float, previous : Segment):
-        super().__init__(previous)
-    
-        self.length : float = length
-        self.width_end : float = width_end
-        self.turn_angle : float = turn_angle
 
-        self.turn_direction : TurnDirection = TurnDirection.Straight
+class CoordinateSegment(Segment):
+    def __init__(
+        self, length: float, width_end: float, turn_angle: float, previous: Segment
+    ):
+        super().__init__(previous)
+
+        self.length: float = length
+        self.width_end: float = width_end
+        self.turn_angle: float = turn_angle
+
+        self.turn_direction: TurnDirection = TurnDirection.Straight
         if turn_angle < 0:
             self.turn_direction = TurnDirection.Left
         elif turn_angle > 0:
             self.turn_direction = TurnDirection.Right
 
+    def initialize(self, width_start: float) -> EdgeSegment | None:
+        self.p1 = (
+            self.previous.p3.copy()
+            if self.previous is not None
+            else Vector2(0, width_start / 2)
+        )
+        self.p2 = (
+            self.previous.p4.copy()
+            if self.previous is not None
+            else Vector2(0, -width_start / 2)
+        )
 
-    def initialize(self, width_start : float) -> EdgeSegment | None:
-        self.p1 =self.previous.p3.copy() if self.previous is not None else Vector2(0, width_start / 2)
-        self.p2 = self.previous.p4.copy() if self.previous is not None else Vector2(0, -width_start / 2)
-
-        if (self.turn_direction != TurnDirection.Straight):
+        if self.turn_direction != TurnDirection.Straight:
             _from = self.p1 if self.turn_direction == TurnDirection.Right else self.p2
             _to = self.p2 if self.turn_direction == TurnDirection.Right else self.p1
             vec = _to - _from
@@ -256,8 +279,10 @@ class CoordinateSegment (Segment):
                 self.p2 = vec_rot
             else:
                 self.p1 = vec_rot
-        
-        direction_in_rad = self.turn_angle+ (self.previous.segment_angle if self.previous is not None else 0.0)
+
+        direction_in_rad = self.turn_angle + (
+            self.previous.segment_angle if self.previous is not None else 0.0
+        )
         direction_with_length = create_vector2_from_rad(direction_in_rad) * self.length
         # direction_with_length = create_vector2_from_rad(direction_in_rad).scale(self.length)
 
@@ -266,7 +291,7 @@ class CoordinateSegment (Segment):
 
         # Move the end points towards each other if the segment gets more narrow towards its end and vice versa
         if not math.isclose(width_start, self.width_end):
-        # if width_start != self.width_end:
+            # if width_start != self.width_end:
             p3_to_p4 = self.p4 - self.p3
             distance_p3_to_p4 = p3_to_p4.magnitude()
             inset_amount = (distance_p3_to_p4 - self.width_end) * 0.5
@@ -274,9 +299,8 @@ class CoordinateSegment (Segment):
             self.p3 += inset_direction * inset_amount
             self.p4 -= inset_direction * inset_amount
 
-        
         # width_relation = self.width_end / self.width_start
-        
+
         # if width_relation < 1:
         #     width_adj = (1 - width_relation) /2
 
