@@ -1,6 +1,7 @@
 import pygame
 from pygame.locals import *
 
+from pysimtorcs.controller import CarController, TestController
 import pysimtorcs.settings as settings
 from pysimtorcs.geometry import create_vector2_from_rad
 from pysimtorcs.race import Race
@@ -14,7 +15,7 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
 
-class App:
+class GameGUI:
     def __init__(self, race: Race):
         self._running = True
         self._display_surf = None
@@ -72,8 +73,6 @@ class App:
                 x2 = line.to_point.x * self.draw_size
                 y2 = line.to_point.y * self.draw_size
 
-                # print(f"Drawing line from ({x1}, {y1}) to ({x2}, {y2}) with color {color}")
-
                 pygame.draw.line(self._display_surf, color, (x1, y1), (x2, y2), 1)
 
         for car in self.race.cars:
@@ -115,7 +114,7 @@ class App:
 
         while self._running:
             dt = self.clock.tick(settings.FPS) / 1000.0
-            r.update(dt)
+            self.race.update(dt)
 
             for event in pygame.event.get():
                 self.on_event(event)
@@ -127,9 +126,20 @@ class App:
         self.on_cleanup()
 
 
-if __name__ == "__main__":
-    t: Track = import_from_torcs("Brondehach", 1)
-    r: Race = Race(t, False)
-    r.create_car()
-    theApp = App(r)
-    theApp.on_execute()
+class Game:
+    def __init__(self, track_name: str, controller: CarController, noise: bool):
+        self.track_name = track_name
+        self.controller = controller
+        self.noise = noise
+
+    def run(self):
+        track = import_from_torcs(self.track_name, 1)
+        race = Race(track, self.noise)
+        race.create_car(self.controller)
+
+        gui = GameGUI(race)
+        gui.on_execute()
+
+
+# game: Game = Game("Brondehach", TestController(50), False)
+# game.run()
