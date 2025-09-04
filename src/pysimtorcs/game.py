@@ -97,7 +97,7 @@ class GameGUI:
         self.write_text("Race", text_x, text_y, 36, True)
         text_y += 50
         self.write_text(
-            f"Time: {self.race.time_now} / {self.race.time_max_sec}",
+            f"Time: {self.race.time_now:.2f} / {self.race.time_max_sec:.2f}",
             text_x,
             text_y,
             24,
@@ -246,5 +246,5 @@ class Game:
 
 
 if __name__ == "__main__":
-    game: Game = Game("Brondehach", TestController(20), False)
+    game: Game = Game("Brondehach", TestController(15), False)
     game.run()

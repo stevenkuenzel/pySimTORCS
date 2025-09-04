@@ -15,7 +15,7 @@ from pysimtorcs.util import sign
 
 
 class Race:
-    def __init__(self, track: Track, noise: bool, time_max_sec: float = 6000):
+    def __init__(self, track: Track, noise: bool, time_max_sec: float = 300):
         self.track = track
         self.noise = noise
         self.time_max_sec: float = time_max_sec
@@ -173,35 +173,51 @@ class Race:
             return []
 
         sensors = car.update_sensor_target_vectors()
-        data = [1.0] * len(sensors)
+        num_sensors = len(sensors)
+        data = [1.0] * num_sensors
+        sensor_range = settings.SENSOR_RANGE
+        sqr_sensor_range = sensor_range * sensor_range
+
+        segments = self.track.segments
+        num_segments = len(segments)
+
+        car_pos = car.position
+        current_seg_idx = car.current_segment.id
 
         for index, sensor in enumerate(sensors):
-            sensor_line: LineSegment = LineSegment(
-                car.position, car.position + sensor * settings.SENSOR_RANGE
-            )
-            d_min: float = float("inf")
-            found: bool = False
+            sensor_line = LineSegment(car_pos, car_pos + sensor * sensor_range)
+            d_min = sqr_sensor_range
+            found = False
 
-            total_distance_to_segment: float = 0.0
-            segment_index: int = car.current_segment.id
+            total_distance = 0.0
+            seg_idx = current_seg_idx
 
-            while total_distance_to_segment <= settings.SENSOR_RANGE:
-                segment: Segment = self.track.segments[segment_index]
-                total_distance_to_segment += segment.length_measured
+            # Only check enough segments to cover the sensor range
+            while total_distance < sensor_range:
+                segment = segments[seg_idx]
+                seg_length = segment.length_measured
+                total_distance += seg_length
 
                 for line in segment.segment_lines:
                     intersection = sensor_line.intersects(line)
                     if intersection is not None:
                         found = True
-                        distance = car.position.distance(intersection)
-                        if distance < d_min:
-                            d_min = distance
+                        distance = car_pos.sqr_distance(intersection)
+                        d_min = distance
+                        if found:
+                            break
+                        # if distance < d_min:
+                        #     d_min = distance
+                        #     # Early exit if intersection is very close
+                        #     if d_min < 1e-6:
+                        #         break
+                # if found and d_min < 1e-6:
+                if found:
+                    break
 
-                segment_index += 1
-                if segment_index >= len(self.track.segments):
-                    segment_index = 0
+                seg_idx = (seg_idx + 1) % num_segments
 
             if found:
-                data[index] = d_min / settings.SENSOR_RANGE
+                data[index] = math.sqrt(d_min / sqr_sensor_range)
 
         return data
