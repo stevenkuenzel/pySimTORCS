@@ -3,6 +3,7 @@ import os
 import xml.etree.ElementTree as ET
 
 from pysimtorcs.geometry import Vector2
+from pysimtorcs.grid import Grid
 from pysimtorcs.segments import (
     ConnectingSegment,
     CoordinateSegment,
@@ -37,6 +38,8 @@ class Track:
         self.x_max: float = float("-inf")
         self.y_min: float = float("inf")
         self.y_max: float = float("-inf")
+
+        self.grid: Grid = None
 
     def __next_segment_id(self) -> int:
         id: int = self.next_segment_id
@@ -104,7 +107,10 @@ class Track:
         self.__find_turn_segments()
         # TODO findMaxTurnSpeeds()
 
+        self.grid: Grid = Grid(self.x_max - self.x_min, self.y_max - self.y_min, 10)
+
         for segment in self.segments:
+            self.grid.add_segment(segment)
             segment.length_track_total = self.length
             self.length += segment.length_measured
 
@@ -163,12 +169,13 @@ class Track:
                     break
 
     def determine_min_max(self, segment: Segment):
-        segment.determine_min_max()
+        bbox = segment.get_bbox()
+        # segment.determine_min_max()
 
-        self.x_min = min(self.x_min, segment.x_min)
-        self.x_max = max(self.x_max, segment.x_max)
-        self.y_min = min(self.y_min, segment.y_min)
-        self.y_max = max(self.y_max, segment.y_max)
+        self.x_min = min(self.x_min, bbox[0])
+        self.x_max = max(self.x_max, bbox[2])
+        self.y_min = min(self.y_min, bbox[1])
+        self.y_max = max(self.y_max, bbox[3])
 
     def get_segments_normalized(self):
         if not self.segments or self.length == 0:

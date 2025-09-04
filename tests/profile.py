@@ -10,5 +10,5 @@ r: Race = Race(t, False)
 for _ in range(10):
     r.create_car(TestController(random.uniform(20, 60)))
 
-while r.t_max > r.t_now and not r.race_finished:
+while r.time_max_sec > r.time_now and not r.race_finished:
     r.update(1.0 / settings.FPS)

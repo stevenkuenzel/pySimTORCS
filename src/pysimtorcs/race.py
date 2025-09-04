@@ -15,17 +15,17 @@ from pysimtorcs.util import sign
 
 
 class Race:
-    def __init__(self, track: Track, noise: bool, t_max: int = 6000):
+    def __init__(self, track: Track, noise: bool, time_max_sec: float = 6000):
         self.track = track
         self.noise = noise
-        self.t_max = t_max
+        self.time_max_sec: float = time_max_sec
+        self.time_now: float = 0
         self.cars: list[Car] = []
-        self.t_now = 0
         self.race_finished = False
 
     def run(self):
         DT = 1.0 / settings.FPS
-        while self.t_now < self.t_max and not self.race_finished:
+        while self.time_now < self.time_max_sec and not self.race_finished:
             self.update(DT)
 
     def create_car(self, controller: CarController = TestController(50.0)) -> Car:
@@ -56,9 +56,9 @@ class Race:
         if all(car.disqualified for car in self.cars):
             self.race_finished = True
 
-        self.t_now += 1
+        self.time_now += dt
 
-        if self.t_now >= self.t_max:
+        if self.time_now >= self.time_max_sec:
             self.race_finished = True
 
     def __update_car_state(self, car: Car) -> None:
@@ -76,6 +76,7 @@ class Race:
                     pass
                 else:
                     if (
+                        # TODO: THIS IS NOT WORKING IF DT IS LARGE AND CAR JUMPS OVER THE NEXT SEGMENT.
                         car.previous_segment.id == self.track.segments[-1].id
                         and car.current_segment.id == 0
                     ):
@@ -144,10 +145,12 @@ class Race:
         return sensor_info
 
     def __determine_car_segment(self, car: Car) -> None:
-        segments_to_check = self.__segment_indices_to_check(car)
+        segments_to_check = self.track.grid.get_segments_at_position(car.position)
+        # segments_to_check = self.__segment_indices_to_check(car)
 
-        for segment_id in segments_to_check:
-            segment = self.track.segments[segment_id]
+        for segment in segments_to_check:
+            # for segment_id in segments_to_check:
+            # segment = self.track.segments[segment_id]
 
             if point_within_polygon(car.position, segment.to_polygon()):
                 car.current_segment = segment
@@ -155,15 +158,15 @@ class Race:
 
         car.current_segment = None
 
-    def __segment_indices_to_check(self, car: Car) -> list[int]:
-        if car.current_segment is None:
-            return []
+    # def __segment_indices_to_check(self, car: Car) -> list[int]:
+    #     if car.current_segment is None:
+    #         return []
 
-        segment_index = car.current_segment.id if car.current_segment is not None else 0
-        num_segments = len(self.track.segments)
-        indices = [segment_index - 1, segment_index, segment_index + 1]
-        # Ensure indices are within valid range using modulo for wrap-around
-        return [i % num_segments for i in indices]
+    #     segment_index = car.current_segment.id if car.current_segment is not None else 0
+    #     num_segments = len(self.track.segments)
+    #     indices = [segment_index - 1, segment_index, segment_index + 1]
+    #     # Ensure indices are within valid range using modulo for wrap-around
+    #     return [i % num_segments for i in indices]
 
     def __update_track_edge_sensors(self, car: Car) -> list[float]:
         if car.disqualified:

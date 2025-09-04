@@ -154,7 +154,20 @@ class Segment:
         return result
 
     def to_polygon(self) -> list[Vector2]:
-        return [self.p3, self.p1, self.p2, self.p4, self.p3]
+        return [self.p3, self.p1, self.p2, self.p4]  # , self.p3]
+
+    def get_bbox(self) -> tuple[float, float, float, float]:
+        """Returns the bounding box of the segment.
+
+        Returns:
+            tuple[float, float, float, float]: (min_x, min_y, max_x, max_y)
+        """
+        min_x = min(self.p1.x, self.p2.x, self.p3.x, self.p4.x)
+        max_x = max(self.p1.x, self.p2.x, self.p3.x, self.p4.x)
+        min_y = min(self.p1.y, self.p2.y, self.p3.y, self.p4.y)
+        max_y = max(self.p1.y, self.p2.y, self.p3.y, self.p4.y)
+
+        return (min_x, min_y, max_x, max_y)
 
     def __eq__(self, value):
         if isinstance(value, Segment):
@@ -234,7 +247,15 @@ class EdgeSegment(Segment):
         self.update_centers()
 
     def to_polygon(self) -> list[Vector2]:
-        return [self.third_point, self.p1, self.p2, self.third_point]
+        return [self.third_point, self.p1, self.p2]  # , self.third_point]
+
+    def get_bbox(self) -> tuple[float, float, float, float]:
+        min_x = min(self.third_point.x, self.p1.x, self.p2.x)
+        max_x = max(self.third_point.x, self.p1.x, self.p2.x)
+        min_y = min(self.third_point.y, self.p1.y, self.p2.y)
+        max_y = max(self.third_point.y, self.p1.y, self.p2.y)
+
+        return (min_x, min_y, max_x, max_y)
 
 
 class CoordinateSegment(Segment):

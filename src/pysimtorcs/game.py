@@ -18,11 +18,13 @@ GREEN = (0, 255, 0)
 class GameGUI:
     def __init__(self, race: Race):
         self._running = True
+        self._paused = False
         self._display_surf = None
         self.clock = None
-        self.size = self.width, self.height = 1280, 1024
+        self.size = self.width, self.height = 1600, 900
         self.race = race
         self.track = race.track
+        self.speed_modifier: float = 1.0
 
         self.draw_size = round(self.height * 0.8)
 
@@ -35,12 +37,26 @@ class GameGUI:
         self._display_surf.fill(WHITE)
         self._running = True
 
-    def on_event(self, event):
+    def on_event(self, event: pygame.event.Event):
         if event.type == pygame.QUIT:
             self._running = False
 
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_a:
+                self.speed_modifier /= 2.0
+            elif event.key == pygame.K_d:
+                self.speed_modifier *= 2.0
+
     def on_loop(self):
         pass
+
+    def write_text(
+        self, text: str, x: int, y: int, size: int = 36, bold: bool = False, color=BLACK
+    ):
+        font = pygame.font.Font(None, size)
+        font.set_bold(bold)
+        text_surf = font.render(text, True, color)
+        self._display_surf.blit(text_surf, (x, y))
 
     def on_render(self):
         self._display_surf.fill(WHITE)
@@ -75,7 +91,77 @@ class GameGUI:
 
                 pygame.draw.line(self._display_surf, color, (x1, y1), (x2, y2), 1)
 
+        # Write some text
+        text_x = self.draw_size + 50
+        text_y = 50
+        self.write_text("Race", text_x, text_y, 36, True)
+        text_y += 50
+        self.write_text(
+            f"Time: {self.race.time_now} / {self.race.time_max_sec}",
+            text_x,
+            text_y,
+            24,
+            True,
+        )
+        text_y += 50
+        self.write_text("Cars", text_x, text_y, 36, True)
+
         for car in self.race.cars:
+            text_y += 40
+            self.write_text(f"Car X", text_x + 10, text_y, 24, True)
+            text_y += 30
+            self.write_text(
+                f"  Lap: {car.sensor_information.lap_position}", text_x + 10, text_y, 24
+            )
+            text_y += 30
+            self.write_text(f"  Pos: {car.position}", text_x + 10, text_y, 24)
+            text_y += 30
+            self.write_text(
+                f"  Heading: {car.heading:.2f} rad", text_x + 10, text_y, 24
+            )
+            text_y += 30
+            self.write_text(
+                f"  Segment: {car.current_segment}", text_x + 10, text_y, 24
+            )
+            text_y += 30
+            self.write_text(
+                f"  Speed: {car.sensor_information.absolute_velocity:.0f} kph",
+                text_x + 10,
+                text_y,
+                24,
+            )
+            text_y += 30
+
+            # SENSORS
+            self.write_text(
+                "  Track Sensors: ",
+                text_x + 10,
+                text_y,
+                24,
+            )
+
+            directions = car.update_sensor_target_vectors()
+            lengths = car.sensor_information.track_edge_sensors
+
+            # Draw the sensor directions
+            center_x = text_x + 200
+            center_y = text_y + 200
+
+            pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 3)
+            pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 202, 1)
+
+            for direction in directions:
+                end_x = center_x + direction.x * 200
+                end_y = center_y + direction.y * 200
+                pygame.draw.line(
+                    self._display_surf, BLACK, (center_x, center_y), (end_x, end_y), 1
+                )
+                # Draw the length
+                length = lengths[directions.index(direction)]
+                length_x = center_x + direction.x * length * 200
+                length_y = center_y + direction.y * length * 200
+                pygame.draw.circle(self._display_surf, RED, (length_x, length_y), 3)
+
             x = round(
                 (car.position.x - self.track.x_min)
                 / (self.track.x_max - self.track.x_min)
@@ -89,7 +175,7 @@ class GameGUI:
             pygame.draw.circle(self._display_surf, BLACK, (x, y), 5)
 
             looking_dir = create_vector2_from_rad(car.heading)
-            end_point = car.position + looking_dir * 10.0
+            end_point = car.position + looking_dir * 8.0
 
             x_to = round(
                 (end_point.x - self.track.x_min)
@@ -102,7 +188,16 @@ class GameGUI:
                 * self.draw_size
             )
 
-            pygame.draw.line(self._display_surf, RED, (x, y), (x_to, y_to), 2)
+            pygame.draw.line(self._display_surf, BLACK, (x, y), (x_to, y_to), 2)
+
+        self.write_text("Speed:", 200, self.height - 150, 36, True)
+        self.write_text(
+            f"A <<   {self.speed_modifier:.3f}x   >> D",
+            200,
+            self.height - 100,
+            36,
+            False,
+        )
 
         pygame.display.flip()
 
@@ -113,13 +208,22 @@ class GameGUI:
         self.on_init()
 
         while self._running:
-            dt = self.clock.tick(settings.FPS) / 1000.0
-            self.race.update(dt)
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_SPACE]:
+                self._paused = True
+            else:
+                self._paused = False
 
             for event in pygame.event.get():
                 self.on_event(event)
-            self.on_loop()
-            self.on_render()
+
+            dt = self.clock.tick(settings.FPS) / 1000.0
+            if not self._paused:
+                print(f"dt: {dt:.4f} s, FPS: {self.clock.get_fps():.2f}")
+                self.race.update(dt * self.speed_modifier)
+
+                self.on_loop()
+                self.on_render()
 
             # if r.race_finished:
             #     break
@@ -142,5 +246,5 @@ class Game:
 
 
 if __name__ == "__main__":
-    game: Game = Game("Brondehach", TestController(50), False)
+    game: Game = Game("Brondehach", TestController(20), False)
     game.run()
