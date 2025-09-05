@@ -97,7 +97,7 @@ class GameGUI:
         self.write_text("Race", text_x, text_y, 36, True)
         text_y += 50
         self.write_text(
-            f"Time: {self.race.time_now:.2f} / {self.race.time_max_sec:.2f}",
+            f"Time: {self.race.time_now:.2f} / {self.race.time_max_sec:.2f} s",
             text_x,
             text_y,
             24,
@@ -108,24 +108,32 @@ class GameGUI:
 
         for car in self.race.cars:
             text_y += 40
-            self.write_text(f"Car X", text_x + 10, text_y, 24, True)
+            self.write_text(f"Car {car.id}", text_x + 10, text_y, 24, True)
             text_y += 30
             self.write_text(
-                f"  Lap: {car.sensor_information.lap_position}", text_x + 10, text_y, 24
+                f"  Lap: {car.sensor_information.rounds_finished + 1}",
+                text_x + 10,
+                text_y,
+                24,
             )
             text_y += 30
-            self.write_text(f"  Pos: {car.position}", text_x + 10, text_y, 24)
+            self.write_text(
+                f"  Segment: #{car.current_segment.id}", text_x + 10, text_y, 24
+            )
+            text_y += 30
+            self.write_text(
+                f"  Position: {car.position.x:.2f}, {car.position.y:.2f}",
+                text_x + 10,
+                text_y,
+                24,
+            )
             text_y += 30
             self.write_text(
                 f"  Heading: {car.heading:.2f} rad", text_x + 10, text_y, 24
             )
             text_y += 30
             self.write_text(
-                f"  Segment: {car.current_segment}", text_x + 10, text_y, 24
-            )
-            text_y += 30
-            self.write_text(
-                f"  Speed: {car.sensor_information.absolute_velocity:.0f} kph",
+                f"  Speed: {car.sensor_information.absolute_velocity:.0f} m/s = {car.sensor_information.absolute_velocity * 3.6:.0f} km/h",
                 text_x + 10,
                 text_y,
                 24,
@@ -145,7 +153,7 @@ class GameGUI:
 
             # Draw the sensor directions
             center_x = text_x + 200
-            center_y = text_y + 200
+            center_y = text_y + 250
 
             pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 3)
             pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 202, 1)
@@ -190,7 +198,7 @@ class GameGUI:
 
             pygame.draw.line(self._display_surf, BLACK, (x, y), (x_to, y_to), 2)
 
-        self.write_text("Speed:", 200, self.height - 150, 36, True)
+        self.write_text("Simulation Speed:", 200, self.height - 150, 36, True)
         self.write_text(
             f"A <<   {self.speed_modifier:.3f}x   >> D",
             200,

@@ -6,17 +6,18 @@ from pysimtorcs.geometry import Vector2, create_vector2_from_rad
 from pysimtorcs.segments import Segment, Turn
 from pysimtorcs.sensor import SensorInformation
 from pysimtorcs.util import clamp, sign
+import numpy as np
 
 RANGE_TRACK_EDGE_SENSOR_LEFT = -45
 RANGE_TRACK_EDGE_SENSOR_RIGHT = 45
 ANGLE_BETWEEN_TRACK_EDGE_SENSORS = 5
 
 
-def define_sensor_angles(from_angle: int, to_angle: int, step_size: int) -> list[float]:
-    angles = []
-    for x in range(from_angle, to_angle + 1, step_size):
-        angles.append((-x / 180.0) * math.pi)
-    return angles
+def define_sensor_angles(from_angle: int, to_angle: int, step_size: int) -> np.ndarray:
+    angles = [
+        (-x / 180.0) * math.pi for x in range(from_angle, to_angle + 1, step_size)
+    ]
+    return np.array(angles, dtype=float)
 
 
 # Maximum steering angle in radians
@@ -56,14 +57,18 @@ PHYSICS_BRAKE_FORCE = 26300.0
 class Car:
     def __init__(
         self,
+        id: int,
         controller: CarController,
         noisy_sensors: bool,
         heading: float,
         position: Vector2,
     ):
+        self.id: int = id
+        self.controller: CarController = controller
         self.noisy_sensors: bool = noisy_sensors
 
-        self.controller: CarController = controller
+        self.heading: float = heading
+        self.position: Vector2 = position
 
         self.total_distance_from_track = 0.0
         self.total_speed = 0.0
@@ -71,7 +76,7 @@ class Car:
         self.disqualified = False
 
         self.sensors = None
-        self.sensor_angles = define_sensor_angles(
+        self.sensor_angles: np.ndarray = define_sensor_angles(
             RANGE_TRACK_EDGE_SENSOR_LEFT,
             RANGE_TRACK_EDGE_SENSOR_RIGHT,
             ANGLE_BETWEEN_TRACK_EDGE_SENSORS,
@@ -79,8 +84,6 @@ class Car:
         self.sensor_information = SensorInformation(
             noisy_sensors, len(self.sensor_angles)
         )
-        self.heading: float = heading  # self.track.starting_angle
-        self.position: Vector2 = position  # self.track.starting_point.copy()
 
         self.current_segment: Segment = None
         self.last_valid_segment: Segment = None
@@ -180,23 +183,31 @@ class Car:
             )
 
     def update_sensor_target_vectors(self) -> list:
-        targets = []
-        for i in range(len(self.sensor_angles)):
-            target = self.heading + self.sensor_angles[i]
-            if target > math.pi:
-                target -= 2.0 * math.pi
-            if target < -math.pi:
-                target += 2.0 * math.pi
-            targets.append(create_vector2_from_rad(target))
+        # TODO: CAN THIS BE FASTER?
+        targets_angles = self.heading + self.sensor_angles
+        targets_angles = (targets_angles + np.pi) % (2 * np.pi) - np.pi
+        targets = [create_vector2_from_rad(angle) for angle in targets_angles]
         return targets
+        # targets = []
+        # for i in range(len(self.sensor_angles)):
+        #     target = self.heading + self.sensor_angles[i]
+        #     if target > math.pi:
+        #         target -= 2.0 * math.pi
+        #     if target < -math.pi:
+        #         target += 2.0 * math.pi
+        #     targets.append(create_vector2_from_rad(target))
+        # return targets
 
     def update_physics(self, dt: float):
+        # Calculate sine and cosine of heading for coordinate transforms
         sn = math.sin(self.heading)
         cs = math.cos(self.heading)
 
+        # Transform velocity to local car coordinates (m/s)
         self.velocity_local.x = cs * self.velocity.x + sn * self.velocity.y
         self.velocity_local.y = cs * self.velocity.y - sn * self.velocity.x
 
+        # Calculate axle weights (N)
         axle_weight_front = PHYSICS_MASS * (
             PHYSICS_AXLE_WEIGHT_RATIO_FRONT * PHYSICS_GRAVITY
             - PHYSICS_WEIGHT_TRANSFER
@@ -212,9 +223,11 @@ class Car:
             / PHYSICS_WHEEL_BASE
         )
 
+        # Calculate yaw speeds at front and rear axles (rad/s)
         yaw_speed_front = PHYSICS_CG_TO_FRONT_AXLE * self.yaw_rate
         yaw_speed_rear = -PHYSICS_CG_TO_REAR_AXLE * self.yaw_rate
 
+        # Calculate slip angles (rad)
         slip_angle_front = (
             math.atan2(
                 self.velocity_local.y + yaw_speed_front, abs(self.velocity_local.x)
@@ -225,9 +238,11 @@ class Car:
             self.velocity_local.y + yaw_speed_rear, abs(self.velocity_local.x)
         )
 
+        # Tire grip coefficients (unitless)
         tire_grip_front = PHYSICS_TIRE_GRIP
         tire_grip_rear = PHYSICS_TIRE_GRIP
 
+        # Lateral friction forces at front and rear tires (N)
         friction_force_front_cy = (
             clamp(
                 -PHYSICS_CORNER_STIFFNESS_FRONT * slip_angle_front,
@@ -245,22 +260,16 @@ class Car:
             * axle_weight_rear
         )
 
-        # Get amount of brake/throttle from our inputs.
+        # Get brake and throttle forces (N)
         brake = self.brake * PHYSICS_BRAKE_FORCE
         throttle = self.throttle * PHYSICS_ENGINE_FORCE
 
-        # ONLY BASIC PHYSICS MODEL. Important to tune those constants:
-        # -throttle:
-        #  --to low = training applies too much throttle,
-        #  --to high = training applies too less throttle.
-
-        #  CONSIDER Sallab, Ahmad El, et al. "Meta learning Framework for Automated Driving." arXiv preprint arXiv:1706.04038 (2017).
-
-        # Resulting force in local car coordinates.
-        # This is implemented as a RWD car only.
+        # Traction forces (N)
+        # Only rear wheel drive (RWD) is modeled
         traction_force_cx = throttle - brake * sign(self.velocity_local.x)
         traction_force_cy = 0.0
 
+        # Drag and rolling resistance forces (N)
         drag_force_cx = (
             -PHYSICS_ROLL_RESIST * self.velocity_local.x
             - PHYSICS_AIR_RESIST * self.velocity_local.x * abs(self.velocity_local.x)
@@ -270,9 +279,9 @@ class Car:
             - PHYSICS_AIR_RESIST * self.velocity_local.y * abs(self.velocity_local.y)
         )
 
-        # Total force in local car coordinates.
+        # Total force in local car coordinates (N)
         total_force_cx = drag_force_cx + traction_force_cx
-        # TODO: IS THIS REALLY CORRECT?
+        # Lateral force includes tire friction and drag
         total_force_cy = (
             drag_force_cy
             + traction_force_cy
@@ -280,7 +289,7 @@ class Car:
             + friction_force_rear_cy
         )
 
-        # Acceleration along the car axes
+        # Acceleration in local car coordinates (m/s^2)
         self.acceleration_local.x = (
             total_force_cx / PHYSICS_MASS
         )  # forward / reverse acceleration
@@ -288,7 +297,7 @@ class Car:
             total_force_cy / PHYSICS_MASS
         )  # lateral acceleration
 
-        # Acceleration in world coordinates
+        # Transform acceleration to world coordinates (m/s^2)
         self.acceleration.x = (
             cs * self.acceleration_local.x - sn * self.acceleration_local.y
         )
@@ -296,18 +305,19 @@ class Car:
             sn * self.acceleration_local.x + cs * self.acceleration_local.y
         )
 
-        # Update velocity.
+        # Update velocity in world coordinates (m/s)
         self.velocity.x += self.acceleration.x * dt
         self.velocity.y += self.acceleration.y * dt
 
+        # Calculate absolute velocity (m/s)
         self.absolute_velocity = self.velocity.length()
 
-        # Calculation rotational forces.
+        # Calculate rotational (yaw) torque (N*m)
         angular_torque = (
             friction_force_front_cy + traction_force_cy
         ) * PHYSICS_CG_TO_FRONT_AXLE - friction_force_rear_cy * PHYSICS_CG_TO_REAR_AXLE
 
-        # Sim gets unstable at very slow speeds, so just stop the car.
+        # Stop the car if velocity is very low and no throttle is applied
         if abs(self.absolute_velocity) < 0.5 and throttle == 0.0:
             self.velocity.x = 0.0
             self.velocity.y = 0.0
@@ -315,14 +325,18 @@ class Car:
             angular_torque = 0.0
             self.yaw_rate = 0.0
 
+        # Calculate angular acceleration (rad/s^2)
         angular_accel = angular_torque / PHYSICS_INERTIA
 
+        # Update yaw rate (rad/s) and heading (rad)
         self.yaw_rate += angular_accel * dt
         self.heading += self.yaw_rate * dt
 
+        # Update position in world coordinates (m)
         self.position.x += self.velocity.x * dt
         self.position.y += self.velocity.y * dt
 
+        # Accumulate total velocity for statistics (m)
         self.total_vel += self.absolute_velocity * dt
 
     def filter_abs(self, brake: float) -> float:

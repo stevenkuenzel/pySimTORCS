@@ -30,10 +30,11 @@ class Race:
 
     def create_car(self, controller: CarController = TestController(50.0)) -> Car:
         car = Car(
-            controller,
-            self.noise,
-            self.track.starting_angle,
-            self.track.starting_point.copy(),
+            id=len(self.cars),
+            controller=controller,
+            noisy_sensors=self.noise,
+            heading=self.track.starting_angle,
+            position=self.track.starting_point.copy(),
         )
         car.current_segment = (
             self.track.segments[0] if len(self.track.segments) > 0 else None
