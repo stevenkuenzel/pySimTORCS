@@ -41,10 +41,9 @@ class SensorInformation:
         # Use the Mersenne Twister random number generator.
         self._random = random.Random()
 
-    @property
-    def distance_raced(self) -> float:
+    def get_distance_raced(self, track_length: float) -> float:
         return (
-            self.rounds_finished * self.track.length
+            self.rounds_finished * track_length
             + self.lap_position
             + self.segment_position
         )

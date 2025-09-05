@@ -121,6 +121,16 @@ class GameGUI:
                 f"  Segment: #{car.current_segment.id}", text_x + 10, text_y, 24
             )
             text_y += 30
+            distance_driven = car.sensor_information.get_distance_raced(
+                self.track.length
+            )
+            self.write_text(
+                f"  Distance driven: {distance_driven:.2f} m",
+                text_x + 10,
+                text_y,
+                24,
+            )
+            text_y += 30
             self.write_text(
                 f"  Position: {car.position.x:.2f}, {car.position.y:.2f}",
                 text_x + 10,
@@ -134,6 +144,13 @@ class GameGUI:
             text_y += 30
             self.write_text(
                 f"  Speed: {car.sensor_information.absolute_velocity:.0f} m/s = {car.sensor_information.absolute_velocity * 3.6:.0f} km/h",
+                text_x + 10,
+                text_y,
+                24,
+            )
+            text_y += 30
+            self.write_text(
+                f"  Average Speed: {(distance_driven / self.race.time_now):.2f} m/s = {(distance_driven / self.race.time_now * 3.6):.2f} km/h",
                 text_x + 10,
                 text_y,
                 24,
