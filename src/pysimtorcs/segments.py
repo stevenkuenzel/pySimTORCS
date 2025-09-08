@@ -2,7 +2,7 @@ import math
 from enum import Enum
 from math import atan2
 
-from pysimtorcs.geometry import LineSegment,create_vector2_from_rad
+from pysimtorcs.geometry import LineSegment, create_vector2_from_rad
 from pygame.math import Vector2
 
 class TurnDirection(Enum):
@@ -290,7 +290,7 @@ class CoordinateSegment(Segment):
             _from = self.p1 if self.turn_direction == TurnDirection.Right else self.p2
             _to = self.p2 if self.turn_direction == TurnDirection.Right else self.p1
             vec = _to - _from
-            vec_rot = _from + vec.rotate(self.turn_angle * 180.0 / math.pi)
+            vec_rot = _from + vec.rotate_rad(self.turn_angle)# * 180.0 / math.pi)
 
             if self.turn_direction == TurnDirection.Right:
                 self.p2 = vec_rot

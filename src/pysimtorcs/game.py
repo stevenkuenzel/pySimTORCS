@@ -3,13 +3,13 @@ from math import atan2, cos, hypot, sin
 import pygame
 from pygame.locals import *
 
+from pysimtorcs.geometry import create_vector2_from_rad
 import pysimtorcs.settings as settings
 from pysimtorcs.car import Car
 from pysimtorcs.controller import CarController, TestController
-from pysimtorcs.geometry import create_vector2_from_rad
 from pysimtorcs.race import Race
 from pysimtorcs.segments import CoordinateSegment, TurnDirection
-from pysimtorcs.track import Track, import_from_torcs
+from pysimtorcs.track import import_from_torcs
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)

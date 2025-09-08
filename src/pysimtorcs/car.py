@@ -3,8 +3,7 @@ import math
 from pygame import Vector2
 
 import pysimtorcs.settings as settings
-from pysimtorcs.controller import CarController, TestController
-from pysimtorcs.geometry import create_vector2_from_rad
+from pysimtorcs.controller import CarController
 from pysimtorcs.segments import Segment, Turn
 from pysimtorcs.sensor import SensorInformation
 from pysimtorcs.util import clamp, sign
