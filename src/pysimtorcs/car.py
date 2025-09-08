@@ -115,7 +115,7 @@ class Car:
 
         self.reward = 0.0
 
-        self.reward_velocity_factor = 2.0
+        self.reward_velocity_factor = 0.1
         self.reward_track_center_factor = 0.25
         self.penalty_steering_factor = 1.0
         self.penalty_speed_change_factor = 1.0
@@ -135,7 +135,7 @@ class Car:
 
     def update_reward(self):
         # Velocity:
-        reward_velocity = self.reward_velocity_factor* self.absolute_velocity / settings.SPEED_MAX
+        reward_velocity = self.reward_velocity_factor* self.absolute_velocity# / settings.SPEED_MAX
 
         # Track center:
         reward_track_center = self.reward_track_center_factor * math.exp(-.5 * (self.sensor_information.distance_to_track_axis**2))
@@ -146,7 +146,7 @@ class Car:
         # Speed change penalty:
         penalty_speed_change = -self.penalty_speed_change_factor * abs(self.absolute_velocity - self.previous_absolute_velocity)
 
-        print(f"Velocity reward: {reward_velocity:.3f}, Track center reward: {reward_track_center:.3f}, Steering penalty: {penalty_steering:.3f}, Speed change penalty: {penalty_speed_change:.3f}")
+        # print(f"Velocity reward: {reward_velocity:.3f}, Track center reward: {reward_track_center:.3f}, Steering penalty: {penalty_steering:.3f}, Speed change penalty: {penalty_speed_change:.3f}")
 
         next_reward = reward_velocity + reward_track_center + penalty_steering + penalty_speed_change
         self.reward += next_reward

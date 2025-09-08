@@ -15,9 +15,10 @@ from pysimtorcs.util import sign
 
 
 class Race:
-    def __init__(self, track: Track, noise: bool, time_max_sec: float = 300):
+    def __init__(self, track: Track, noise: bool, disqualify_after_one_round:bool, time_max_sec: float = 300):
         self.track = track
         self.noise = noise
+        self.disqualify_after_one_round = disqualify_after_one_round
         self.time_max_sec: float = time_max_sec
         self.time_now: float = 0
         self.cars: list[Car] = []
@@ -86,6 +87,9 @@ class Race:
                         and car.current_segment.id == 0
                     ):
                         sensor_info.rounds_finished += 1
+
+                        if self.disqualify_after_one_round:
+                            car.disqualified = True
                     else:
                         segment_diff = car.current_segment.id - car.previous_segment.id
                         if segment_diff < 0:

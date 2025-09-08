@@ -6,7 +6,7 @@ from pysimtorcs.race import Race
 
 
 t: Track = import_from_torcs("Brondehach", 1)
-r: Race = Race(t, False)
+r: Race = Race(t, False,True)
 for _ in range(10):
     r.create_car(TestController(random.uniform(20, 60)))
 
