@@ -98,18 +98,27 @@ class Car:
         self.distance_raced = 0.0
         self.speed_reached_max = 0.0
 
+        # The real distance moved. Useful for fitness calculation.
+        self.distance_moved = 0.0
+
         # Physics.
         self.velocity = Vector2()
         self.velocity_local = Vector2()
         self.acceleration = Vector2()
         self.acceleration_local = Vector2()
         self.absolute_velocity = 0.0
+        self.previous_absolute_velocity = 0.0 # For Fitness.
         self.yaw_rate = 0.0
 
         # ABS flag.
         self.last_brake_loosened = True
 
-        self.total_vel = 0.0
+        self.reward = 0.0
+
+        self.reward_velocity_factor = 2.0
+        self.reward_track_center_factor = 0.25
+        self.penalty_steering_factor = 1.0
+        self.penalty_speed_change_factor = 1.0
 
     def update(self, dt: float, track_length: float):
         input = self.controller.control(self.sensor_information)
@@ -122,6 +131,25 @@ class Car:
         self.steer_angle = target_steer * STEER_MAX
 
         self.update_physics(dt)
+        self.update_reward()
+
+    def update_reward(self):
+        # Velocity:
+        reward_velocity = self.reward_velocity_factor* self.absolute_velocity / settings.SPEED_MAX
+
+        # Track center:
+        reward_track_center = self.reward_track_center_factor * math.exp(-.5 * (self.sensor_information.distance_to_track_axis**2))
+
+        # Steering penalty:
+        penalty_steering = -self.penalty_steering_factor * abs(self.steer_angle)
+
+        # Speed change penalty:
+        penalty_speed_change = -self.penalty_speed_change_factor * abs(self.absolute_velocity - self.previous_absolute_velocity)
+
+        print(f"Velocity reward: {reward_velocity:.3f}, Track center reward: {reward_track_center:.3f}, Steering penalty: {penalty_steering:.3f}, Speed change penalty: {penalty_speed_change:.3f}")
+
+        next_reward = reward_velocity + reward_track_center + penalty_steering + penalty_speed_change
+        self.reward += next_reward
 
     def update_fitness_related_information(
         self, dt: float, target_steer: float, track_length: float
@@ -312,6 +340,7 @@ class Car:
         self.velocity.y += self.acceleration.y * dt
 
         # Calculate absolute velocity (m/s)
+        self.previous_absolute_velocity = self.absolute_velocity
         self.absolute_velocity = self.velocity.length()
 
         # Calculate rotational (yaw) torque (N*m)
@@ -338,8 +367,8 @@ class Car:
         self.position.x += self.velocity.x * dt
         self.position.y += self.velocity.y * dt
 
-        # Accumulate total velocity for statistics (m)
-        self.total_vel += self.absolute_velocity * dt
+        # Accumulate total distance for statistics (m)
+        self.distance_moved += self.absolute_velocity * dt
 
     def filter_abs(self, brake: float) -> float:
         if brake >= 0.5:

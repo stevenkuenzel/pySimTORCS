@@ -57,6 +57,7 @@ class Race:
 
             car.update(dt, self.track.length)
 
+
         if all(car.disqualified for car in self.cars):
             self.race_finished = True
 
@@ -172,6 +173,7 @@ class Race:
     #     # Ensure indices are within valid range using modulo for wrap-around
     #     return [i % num_segments for i in indices]
 
+    
     def __update_track_edge_sensors(self, car: Car) -> list[float]:
         if car.disqualified:
             return []
@@ -212,7 +214,7 @@ class Race:
                             break
                         # if distance < d_min:
                         #     d_min = distance
-                        #     # Early exit if intersection is very close
+                        #     # Early exit if intersection is very close-
                         #     if d_min < 1e-6:
                         #         break
                 # if found and d_min < 1e-6:
