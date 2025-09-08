@@ -1,7 +1,7 @@
 import math
 
 import pysimtorcs.settings as settings
-from pysimtorcs.car import Car
+from pysimtorcs.car import STEER_MAX, Car
 from pysimtorcs.controller import CarController, TestController
 from pysimtorcs.geometry import (
     LineSegment,
@@ -49,6 +49,9 @@ class Race:
         for car in self.cars:
             if car.disqualified:
                 continue
+            # max_pos = self.time_now * STEER_MAX
+            # print("Steering total:", car.sensor_information.total_steering, " of ", max_pos)
+            
 
             self.__update_car_state(car)
 

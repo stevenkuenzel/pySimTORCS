@@ -38,6 +38,9 @@ class SensorInformation:
         # The summed distance in meters driven without steering.
         self.length_driven_straight = 0.0
 
+        # The summed steering angle (absolute value).
+        self.total_steering = 0.0
+
         # Use the Mersenne Twister random number generator.
         self._random = random.Random()
 

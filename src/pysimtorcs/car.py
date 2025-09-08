@@ -177,6 +177,8 @@ class Car:
                 )
                 self.sensor_information.ticks_in_or_before_turns += 1
 
+        self.sensor_information.total_steering += abs(self.steer_angle) * dt
+
         if abs(target_steer) <= settings.THRESHOLD_DRIVING_STRAIGHT:
             self.sensor_information.length_driven_straight += (
                 self.absolute_velocity * dt
