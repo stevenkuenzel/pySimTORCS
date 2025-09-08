@@ -1,5 +1,7 @@
 import math
 
+from pygame import Vector2
+
 import pysimtorcs.settings as settings
 from pysimtorcs.car import STEER_MAX, Car
 from pysimtorcs.controller import CarController, TestController
@@ -12,6 +14,7 @@ from pysimtorcs.segments import Segment
 from pysimtorcs.sensor import SensorInformation
 from pysimtorcs.track import Track
 from pysimtorcs.util import sign
+import numpy as np
 
 
 class Race:
@@ -120,7 +123,7 @@ class Race:
                 if det_axis == 0
                 else adjacent_point_on_segment(car.position, segment.axis)
             )
-            sensor_info.segment_position = segment.center_start.distance(
+            sensor_info.segment_position = segment.center_start.distance_to(
                 projected_on_axis
             )
 
@@ -132,7 +135,7 @@ class Race:
 
             sensor_info.distance_to_track_axis = (
                 det_axis
-                * car.position.distance(projected_on_axis)
+                * car.position.distance_to(projected_on_axis)
                 / (0.5 * width_at_point)
                 if det_axis != 0
                 else 0.0
@@ -178,6 +181,7 @@ class Race:
     #     return [i % num_segments for i in indices]
 
     
+    
     def __update_track_edge_sensors(self, car: Car) -> list[float]:
         if car.disqualified:
             return []
@@ -186,7 +190,6 @@ class Race:
         num_sensors = len(sensors)
         data = [1.0] * num_sensors
         sensor_range = settings.SENSOR_RANGE
-        sqr_sensor_range = sensor_range * sensor_range
 
         segments = self.track.segments
         num_segments = len(segments)
@@ -195,8 +198,8 @@ class Race:
         current_seg_idx = car.current_segment.id
 
         for index, sensor in enumerate(sensors):
-            sensor_line = LineSegment(car_pos, car_pos + sensor * sensor_range)
-            d_min = sqr_sensor_range
+            sensor_to = car_pos + sensor * sensor_range
+            d_min = sensor_range
             found = False
 
             total_distance = 0.0
@@ -209,25 +212,17 @@ class Race:
                 total_distance += seg_length
 
                 for line in segment.segment_lines:
-                    intersection = sensor_line.intersects(line)
+                    intersection = line.intersects(car_pos, sensor_to)
                     if intersection is not None:
                         found = True
-                        distance = car_pos.sqr_distance(intersection)
-                        d_min = distance
-                        if found:
-                            break
-                        # if distance < d_min:
-                        #     d_min = distance
-                        #     # Early exit if intersection is very close-
-                        #     if d_min < 1e-6:
-                        #         break
-                # if found and d_min < 1e-6:
+                        d_min = car_pos.distance_to(intersection)
+                        break
                 if found:
                     break
 
                 seg_idx = (seg_idx + 1) % num_segments
 
             if found:
-                data[index] = math.sqrt(d_min / sqr_sensor_range)
+                data[index] = d_min / sensor_range
 
         return data

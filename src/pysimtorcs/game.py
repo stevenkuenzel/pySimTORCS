@@ -431,7 +431,7 @@ class Game:
         self.noise = noise
 
     def run(self):
-        track = import_from_torcs(self.track_name, 2)
+        track = import_from_torcs(self.track_name, 1)
         race = Race(track, self.noise, self.time_max_sec)
         race.create_car(self.controller)
 

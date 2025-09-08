@@ -50,15 +50,17 @@ class Grid:
         """
         cell_x, cell_y = self.get_cell_coords(position.x, position.y)
 
-        # Da ein Auto sich schnell bewegt, ist es sicherer, auch die
-        # 8 Nachbarzellen zu überprüfen, um sicherzugehen, dass
-        # keine Zellgrenze "übersprungen" wird.
-        candidate_segments = set()
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                check_x, check_y = cell_x + dx, cell_y + dy
-                if 0 <= check_x < self.grid_width and 0 <= check_y < self.grid_height:
-                    for segment in self.cells[check_x][check_y]:
-                        candidate_segments.add(segment)
+        return self.cells[cell_x][cell_y]
 
-        return list(candidate_segments)
+        # # Da ein Auto sich schnell bewegt, ist es sicherer, auch die
+        # # 8 Nachbarzellen zu überprüfen, um sicherzugehen, dass
+        # # keine Zellgrenze "übersprungen" wird.
+        # candidate_segments = set()
+        # for dx in [-1, 0, 1]:
+        #     for dy in [-1, 0, 1]:
+        #         check_x, check_y = cell_x + dx, cell_y + dy
+        #         if 0 <= check_x < self.grid_width and 0 <= check_y < self.grid_height:
+        #             for segment in self.cells[check_x][check_y]:
+        #                 candidate_segments.add(segment)
+
+        # return list(candidate_segments)

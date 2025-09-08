@@ -1,98 +1,40 @@
-from dataclasses import dataclass
 import math
-
-
-@dataclass(slots=True)
-class Vector2:
-    # def __init__(self, x: float = 0.0, y: float = 0.0):
-    #     self.x = x
-    #     self.y = y
-
-    x: float = 0.0
-    y: float = 0.0
-
-    def __add__(self, other):
-        if isinstance(other, Vector2):
-            return Vector2(self.x + other.x, self.y + other.y)
-
-        raise TypeError(
-            f"Unsupported operand type(s) for +: 'Vector2' and '{type(other).__name__}'"
-        )
-
-    def __sub__(self, other):
-        if isinstance(other, Vector2):
-            return Vector2(self.x - other.x, self.y - other.y)
-        raise TypeError(
-            f"Unsupported operand type(s) for -: 'Vector2' and '{type(other).__name__}'"
-        )
-
-    def __mul__(self, other):
-        if isinstance(other, Vector2):
-            return Vector2(self.x * other.x, self.y * other.y)
-        elif isinstance(other, (int, float)):
-            return Vector2(self.x * other, self.y * other)
-        raise TypeError(
-            f"Unsupported operand type(s) for *: 'Vector2' and '{type(other).__name__}'"
-        )
-
-    def __truediv__(self, other):
-        if isinstance(other, Vector2):
-            return Vector2(self.x / other.x, self.y / other.y)
-        elif isinstance(other, (int, float)):
-            return Vector2(self.x / other, self.y / other)
-        raise TypeError(
-            f"Unsupported operand type(s) for /: 'Vector2' and '{type(other).__name__}'"
-        )
-
-    def cross(self, other: "Vector2") -> float:
-        return self.x * other.y - self.y * other.x
-
-    def scale(self, scalar: float) -> "Vector2":
-        return Vector2(self.x * scalar, self.y * scalar)
-
-    def scale_self(self, scalar: float) -> None:
-        self.x *= scalar
-        self.y *= scalar
-
-    def rotate(self, angle_in_rad: float) -> "Vector2":
-        cos_angle = math.cos(angle_in_rad)
-        sin_angle = math.sin(angle_in_rad)
-        return Vector2(
-            x=self.x * cos_angle - self.y * sin_angle,
-            y=self.x * sin_angle + self.y * cos_angle,
-        )
-
-    def sqr_length(self) -> float:
-        return self.x**2 + self.y**2
-
-    def length(self) -> float:
-        return math.sqrt(self.sqr_length())
-
-    def normalize(self) -> "Vector2":
-        mag = self.length()
-        if mag > 0:
-            return Vector2(self.x / mag, self.y / mag)
-        return Vector2()
-
-    def sqr_distance(self, other: "Vector2") -> float:
-        return (self.x - other.x) ** 2 + (self.y - other.y) ** 2
-
-    def distance(self, other: "Vector2") -> float:
-        return math.sqrt(self.sqr_distance(other))
-
-    def copy(self) -> "Vector2":
-        return Vector2(self.x, self.y)
-
-    def __repr__(self):
-        return f"Vector2({self.x}, {self.y})"
-
+from pygame.math import Vector2
+import numpy as np
 
 class LineSegment:
     def __init__(self, from_point: Vector2, to_point: Vector2):
         self.from_point: Vector2 = from_point
         self.to_point: Vector2 = to_point
 
-    def intersects(self, other: "LineSegment") -> Vector2 | None:
+    def intersects_vector(self, other: "LineSegment") -> Vector2 | None:
+        """
+        Efficient intersection of two line segments (2D) using pygame.Vector2.
+        Returns the intersection point as Vector2 if it exists, otherwise None.
+        """
+        p = self.from_point
+        r = self.to_point - self.from_point
+        q = other.from_point
+        s = other.to_point - other.from_point
+
+        r_cross_s = r.cross(s)
+        q_minus_p = q - p
+
+        if r_cross_s == 0:
+            # Lines are parallel or collinear
+            return None
+
+        t = q_minus_p.cross(s) / r_cross_s
+        u = q_minus_p.cross(r) / r_cross_s
+
+        if 0 <= t <= 1 and 0 <= u <= 1:
+            intersection = p + t * r
+            return intersection
+
+        return None
+    
+    # def intersects(self, other_from: Vector2, other_to:np.ndarray) -> Vector2 | None:
+    def intersects(self, other_from: Vector2, other_to:Vector2) -> Vector2 | None:
         """
         Effizienter Schnittpunkt zweier Liniensegmente (2D).
         Gibt den Schnittpunkt als Vector2 zurück, falls vorhanden, sonst None.
@@ -100,8 +42,9 @@ class LineSegment:
         """
         x1, y1 = self.from_point.x, self.from_point.y
         x2, y2 = self.to_point.x, self.to_point.y
-        x3, y3 = other.from_point.x, other.from_point.y
-        x4, y4 = other.to_point.x, other.to_point.y
+        x3, y3 = other_from.x, other_from.y
+        # x4, y4 = other_to[0], other_to[1]
+        x4, y4 = other_to.x, other_to.y
 
         dx1 = x2 - x1
         dy1 = y2 - y1
@@ -125,6 +68,7 @@ class LineSegment:
             return Vector2(ix, iy)
 
         return None
+
 
 
 def point_within_polygon(point: Vector2, polygon: list[Vector2]):

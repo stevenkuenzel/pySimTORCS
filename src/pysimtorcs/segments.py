@@ -2,8 +2,8 @@ import math
 from enum import Enum
 from math import atan2
 
-from pysimtorcs.geometry import LineSegment, Vector2, create_vector2_from_rad
-
+from pysimtorcs.geometry import LineSegment,create_vector2_from_rad
+from pygame.math import Vector2
 
 class TurnDirection(Enum):
     Left = 1
@@ -117,9 +117,9 @@ class Segment:
         self.segment_direction = (self.center_end - self.center_start).normalize()
         self.segment_angle = atan2(self.segment_direction.y, self.segment_direction.x)
 
-        self.length_measured = self.center_end.distance(self.center_start)
-        self.width_start = self.p2.distance(self.p1)
-        self.width_end = self.p4.distance(self.p3)
+        self.length_measured = self.center_end.distance_to(self.center_start)
+        self.width_start = self.p2.distance_to(self.p1)
+        self.width_end = self.p4.distance_to(self.p3)
 
     def determine_min_max(self):
         self.x_min = min(self.x_min, self.p1.x, self.p2.x, self.p3.x, self.p4.x)
@@ -224,8 +224,8 @@ class EdgeSegment(Segment):
         self.turn_direction: TurnDirection = turn_direction
 
         # DO NOT COPY POINTS HERE. USE REFERENCES.
-        self.p1 = from_segment.p3
-        self.p2 = from_segment.p4
+        self.p1 = from_segment.p3#.copy()
+        self.p2 = from_segment.p4#.copy()
 
         if turn_direction == TurnDirection.Right:
             self.p3 = self.p1
@@ -290,7 +290,7 @@ class CoordinateSegment(Segment):
             _from = self.p1 if self.turn_direction == TurnDirection.Right else self.p2
             _to = self.p2 if self.turn_direction == TurnDirection.Right else self.p1
             vec = _to - _from
-            vec_rot = _from + vec.rotate(self.turn_angle)
+            vec_rot = _from + vec.rotate(self.turn_angle * 180.0 / math.pi)
 
             if self.turn_direction == TurnDirection.Right:
                 self.p2 = vec_rot

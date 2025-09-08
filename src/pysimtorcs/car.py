@@ -1,8 +1,10 @@
 import math
 
+from pygame import Vector2
+
 import pysimtorcs.settings as settings
 from pysimtorcs.controller import CarController, TestController
-from pysimtorcs.geometry import Vector2, create_vector2_from_rad
+from pysimtorcs.geometry import create_vector2_from_rad
 from pysimtorcs.segments import Segment, Turn
 from pysimtorcs.sensor import SensorInformation
 from pysimtorcs.util import clamp, sign
@@ -187,12 +189,15 @@ class Car:
                 self.absolute_velocity * dt
             )
 
-    def update_sensor_target_vectors(self) -> list:
-        # TODO: CAN THIS BE FASTER?
-        targets_angles = self.heading + self.sensor_angles
-        targets_angles = (targets_angles + np.pi) % (2 * np.pi) - np.pi
-        targets = [create_vector2_from_rad(angle) for angle in targets_angles]
-        return targets
+    def update_sensor_target_vectors(self) -> list[Vector2]:
+        # Vectorized version using pygame.Vector2
+        angles = self.heading + self.sensor_angles
+        angles = (angles + math.pi) % (2 * math.pi) - math.pi
+        # Use numpy for fast sin/cos, then create Vector2 in bulk
+        x = np.cos(angles)
+        y = np.sin(angles)
+        # pygame.Vector2 does not support bulk creation, but we can use list comprehension efficiently
+        return [Vector2(xi, yi) for xi, yi in zip(x, y)]
         # targets = []
         # for i in range(len(self.sensor_angles)):
         #     target = self.heading + self.sensor_angles[i]
