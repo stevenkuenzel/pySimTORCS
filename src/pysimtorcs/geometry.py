@@ -92,79 +92,37 @@ class LineSegment:
         self.from_point: Vector2 = from_point
         self.to_point: Vector2 = to_point
 
-    def intersects(self, other: "LineSegment") -> Vector2:
+    def intersects(self, other: "LineSegment") -> Vector2 | None:
         """
-        Findet den Schnittpunkt zweier Liniensegmente.
-
-        Args:
-            p1, q1 (Vector2): Start- und Endpunkt des ersten Liniensegments.
-            p2, q2 (Vector2): Start- und Endpunkt des zweiten Liniensegments.
-
-        Returns:
-            Vector2: Der Schnittpunkt, falls vorhanden.
-            None: Falls sich die Liniensegmente nicht schneiden.
+        Effizienter Schnittpunkt zweier Liniensegmente (2D).
+        Gibt den Schnittpunkt als Vector2 zurück, falls vorhanden, sonst None.
+        Arbeitet direkt auf den x- und y-Werten.
         """
-        p1 = self.from_point
-        q1 = self.to_point
-        p2 = other.from_point
-        q2 = other.to_point
+        x1, y1 = self.from_point.x, self.from_point.y
+        x2, y2 = self.to_point.x, self.to_point.y
+        x3, y3 = other.from_point.x, other.from_point.y
+        x4, y4 = other.to_point.x, other.to_point.y
 
-        def orientation(p: Vector2, q: Vector2, r: Vector2):
-            """
-            Bestimmt die Ausrichtung (Orientierung) von drei Punkten.
-            Liefert 0, 1 oder 2 für kollinear, im Uhrzeigersinn oder gegen den Uhrzeigersinn.
-            """
-            val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
-            if val == 0:
-                return 0  # kollinear
-            return 1 if val > 0 else 2  # im Uhrzeigersinn oder gegen den Uhrzeigersinn
+        dx1 = x2 - x1
+        dy1 = y2 - y1
+        dx2 = x4 - x3
+        dy2 = y4 - y3
 
-        def on_segment(p: Vector2, q: Vector2, r: Vector2):
-            """Prüft, ob Punkt q auf dem Liniensegment pr liegt."""
-            return (
-                q.x <= max(p.x, r.x)
-                and q.x >= min(p.x, r.x)
-                and q.y <= max(p.y, r.y)
-                and q.y >= min(p.y, r.y)
-            )
+        denom = dx1 * dy2 - dy1 * dx2
+        if denom == 0:
+            # Parallel oder kollinear
+            return None
 
-        # Orientierungen berechnen
-        o1 = orientation(p1, q1, p2)
-        o2 = orientation(p1, q1, q2)
-        o3 = orientation(p2, q2, p1)
-        o4 = orientation(p2, q2, q1)
+        dx3 = x3 - x1
+        dy3 = y3 - y1
 
-        # Allgemeiner Fall: Schnittpunkt, wenn sich die Orientierungen ändern
-        if o1 != o2 and o3 != o4:
-            # Die Vektoren für die parametrische Gleichung
-            r = q1 - p1
-            s = q2 - p2
+        t = (dx3 * dy2 - dy3 * dx2) / denom
+        u = (dx3 * dy1 - dy3 * dx1) / denom
 
-            # Denominator für die Lösung des linearen Gleichungssystems
-            denominator = r.x * s.y - r.y * s.x
-
-            if denominator == 0:
-                # Parallel, aber nicht kollinear. Kein Schnittpunkt.
-                return None
-
-            t = ((p2.x - p1.x) * s.y - (p2.y - p1.y) * s.x) / denominator
-            u = ((p2.x - p1.x) * r.y - (p2.y - p1.y) * r.x) / denominator
-
-            # Prüfen, ob der Schnittpunkt innerhalb der Segmente liegt
-            if 0 <= t <= 1 and 0 <= u <= 1:
-                # Berechnen des Schnittpunkts und Rückgabe
-                intersection_point = p1 + r * t
-                return intersection_point
-
-        # Spezialfälle für kollineare Segmente
-        if o1 == 0 and on_segment(p1, p2, q1):
-            return p2
-        if o2 == 0 and on_segment(p1, q2, q1):
-            return q2
-        if o3 == 0 and on_segment(p2, p1, q2):
-            return p1
-        if o4 == 0 and on_segment(p2, q1, q2):
-            return q1
+        if 0 <= t <= 1 and 0 <= u <= 1:
+            ix = x1 + t * dx1
+            iy = y1 + t * dy1
+            return Vector2(ix, iy)
 
         return None
 

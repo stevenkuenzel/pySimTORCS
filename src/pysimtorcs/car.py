@@ -113,12 +113,6 @@ class Car:
         # ABS flag.
         self.last_brake_loosened = True
 
-        self.reward = 0.0
-
-        self.reward_velocity_factor = 0.1
-        self.reward_track_center_factor = 0.25
-        self.penalty_steering_factor = 1.0
-        self.penalty_speed_change_factor = 1.0
 
     def update(self, dt: float, track_length: float):
         input = self.controller.control(self.sensor_information)
@@ -131,25 +125,6 @@ class Car:
         self.steer_angle = target_steer * STEER_MAX
 
         self.update_physics(dt)
-        self.update_reward()
-
-    def update_reward(self):
-        # Velocity:
-        reward_velocity = self.reward_velocity_factor* self.absolute_velocity# / settings.SPEED_MAX
-
-        # Track center:
-        reward_track_center = self.reward_track_center_factor * math.exp(-.5 * (self.sensor_information.distance_to_track_axis**2))
-
-        # Steering penalty:
-        penalty_steering = -self.penalty_steering_factor * abs(self.steer_angle)
-
-        # Speed change penalty:
-        penalty_speed_change = -self.penalty_speed_change_factor * abs(self.absolute_velocity - self.previous_absolute_velocity)
-
-        # print(f"Velocity reward: {reward_velocity:.3f}, Track center reward: {reward_track_center:.3f}, Steering penalty: {penalty_steering:.3f}, Speed change penalty: {penalty_speed_change:.3f}")
-
-        next_reward = reward_velocity + reward_track_center + penalty_steering + penalty_speed_change
-        self.reward += next_reward
 
     def update_fitness_related_information(
         self, dt: float, target_steer: float, track_length: float
