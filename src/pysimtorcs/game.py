@@ -2,6 +2,7 @@ from math import atan2, cos, hypot, sin
 
 import pygame
 from pygame.locals import *
+from pygame.math import Vector2
 
 from pysimtorcs.geometry import create_vector2_from_rad
 import pysimtorcs.settings as settings
@@ -343,6 +344,30 @@ class GameGUI:
             text_y += 30
 
             if not draw_sensors:
+                # Draw throttle and steering as arrow.
+                center_x = text_x + 200
+                center_y = text_y + 250
+
+                arrow_start = Vector2(center_x, center_y)
+                arrow_direction = Vector2(car.steer_angle, -car.throttle) 
+                length_multiplier = 200
+                arrow_end = arrow_start + arrow_direction * length_multiplier
+
+                # Draw throttle and steering as arrows
+                # Throttle arrow (vertical, up for positive throttle)
+                throttle = car.throttle  # -1..1
+                arrow_color = GREEN if throttle >= 0 else RED
+                pygame.draw.line(
+                    self._display_surf,
+                    arrow_color,
+                    (center_x, center_y),
+                    (arrow_end.x, arrow_end.y),
+                    6,
+                )
+
+                pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 200, 1)
+               
+
                 return
 
             # SENSORS
