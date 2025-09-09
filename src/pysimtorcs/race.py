@@ -1,12 +1,10 @@
 import math
-
-from pygame import Vector2
+from random import Random
 
 import pysimtorcs.settings as settings
-from pysimtorcs.car import STEER_MAX, Car
+from pysimtorcs.car import Car
 from pysimtorcs.controller import CarController, TestController
 from pysimtorcs.geometry import (
-    LineSegment,
     adjacent_point_on_segment,
     point_within_polygon,
 )
@@ -14,21 +12,20 @@ from pysimtorcs.segments import Segment
 from pysimtorcs.sensor import SensorInformation
 from pysimtorcs.track import Track
 from pysimtorcs.util import sign
-import numpy as np
 
 
 class Race:
-    def __init__(self, track: Track, noise: bool, disqualify_after_one_round:bool, time_max_sec: float = 300):
+    def __init__(self, track: Track, noise: bool, random : Random = None, time_max_sec: float = 300):
         self.track = track
         self.noise = noise
-        self.disqualify_after_one_round = disqualify_after_one_round
+        self.random = random
         self.time_max_sec: float = time_max_sec
         self.time_now: float = 0
         self.cars: list[Car] = []
         self.race_finished = False
 
-    def run(self):
-        DT = 1.0 / settings.FPS
+    def run(self, fps : int = settings.FPS):
+        DT = 1.0 / fps
         while self.time_now < self.time_max_sec and not self.race_finished:
             self.update(DT)
 
@@ -36,7 +33,6 @@ class Race:
         car = Car(
             id=len(self.cars),
             controller=controller,
-            noisy_sensors=self.noise,
             heading=self.track.starting_angle,
             position=self.track.starting_point.copy(),
         )
@@ -90,9 +86,6 @@ class Race:
                         and car.current_segment.id == 0
                     ):
                         sensor_info.rounds_finished += 1
-
-                        if self.disqualify_after_one_round:
-                            car.disqualified = True
                     else:
                         segment_diff = car.current_segment.id - car.previous_segment.id
                         if segment_diff < 0:
@@ -146,13 +139,14 @@ class Race:
         if abs(sensor_info.distance_to_track_axis) > 0.9:
             car.total_distance_from_track += abs(sensor_info.distance_to_track_axis)
 
-        if not car.disqualified:
-            car.total_speed += car.absolute_velocity
+        # if not car.disqualified:
+        #     car.total_speed += car.absolute_velocity
 
-            if car.absolute_velocity > car.speed_reached_max:
-                car.speed_reached_max = car.absolute_velocity
+        #     if car.absolute_velocity > car.speed_reached_max:
+        #         car.speed_reached_max = car.absolute_velocity
 
-        sensor_info.perturb_if_necessary()
+        if self.noise:
+            sensor_info.perturb_if_necessary(self.random)
 
         return sensor_info
 

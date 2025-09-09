@@ -60,13 +60,11 @@ class Car:
         self,
         id: int,
         controller: CarController,
-        noisy_sensors: bool,
         heading: float,
         position: Vector2,
     ):
         self.id: int = id
         self.controller: CarController = controller
-        self.noisy_sensors: bool = noisy_sensors
 
         self.heading: float = heading
         self.position: Vector2 = position
@@ -82,9 +80,7 @@ class Car:
             RANGE_TRACK_EDGE_SENSOR_RIGHT,
             ANGLE_BETWEEN_TRACK_EDGE_SENSORS,
         )
-        self.sensor_information = SensorInformation(
-            noisy_sensors, len(self.sensor_angles)
-        )
+        self.sensor_information = SensorInformation(len(self.sensor_angles))
 
         self.current_segment: Segment = None
         self.last_valid_segment: Segment = None
@@ -94,10 +90,6 @@ class Car:
         self.throttle = 0.0
         self.brake = 0.0
         self.steer_angle = 0.0
-
-        # Fitness.
-        self.distance_raced = 0.0
-        self.speed_reached_max = 0.0
 
         # The real distance moved. Useful for fitness calculation.
         self.distance_moved = 0.0
@@ -192,20 +184,14 @@ class Car:
         # Vectorized version using pygame.Vector2
         angles = self.heading + self.sensor_angles
         angles = (angles + math.pi) % (2 * math.pi) - math.pi
+
         # Use numpy for fast sin/cos, then create Vector2 in bulk
         x = np.cos(angles)
         y = np.sin(angles)
+
         # pygame.Vector2 does not support bulk creation, but we can use list comprehension efficiently
         return [Vector2(xi, yi) for xi, yi in zip(x, y)]
-        # targets = []
-        # for i in range(len(self.sensor_angles)):
-        #     target = self.heading + self.sensor_angles[i]
-        #     if target > math.pi:
-        #         target -= 2.0 * math.pi
-        #     if target < -math.pi:
-        #         target += 2.0 * math.pi
-        #     targets.append(create_vector2_from_rad(target))
-        # return targets
+
 
     def update_physics(self, dt: float):
         # Calculate sine and cosine of heading for coordinate transforms

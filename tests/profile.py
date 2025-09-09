@@ -4,7 +4,7 @@ from pysimtorcs.track import Track, import_from_torcs
 from pysimtorcs.race import Race
 
 num_of_cars = 10
-
+fps = 30
 
 track: Track = import_from_torcs("Brondehach", 1)
 
@@ -15,6 +15,6 @@ for i in range(num_of_cars):
     race.create_car(TestController(target_speed))
 
 while race.time_max_sec > race.time_now and not race.race_finished:
-    race.update(1.0 / settings.FPS)
+    race.update(1.0 / fps)
 
 print("Time elapsed:", race.time_now, "sec")

@@ -1,6 +1,7 @@
 import math
 
-from pysimtorcs.geometry import Vector2
+from pygame import Vector2
+
 from pysimtorcs.segments import Segment
 
 

@@ -2,7 +2,8 @@ import math
 import os
 import xml.etree.ElementTree as ET
 
-from pysimtorcs.geometry import Vector2
+from pygame import Vector2
+
 from pysimtorcs.grid import Grid
 from pysimtorcs.segments import (
     ConnectingSegment,

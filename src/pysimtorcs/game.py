@@ -77,8 +77,10 @@ class GameGUI:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_a:
                 self.speed_modifier /= 2.0
+                self.speed_modifier = max(self.speed_modifier, 0.125)
             elif event.key == pygame.K_d:
                 self.speed_modifier *= 2.0
+                self.speed_modifier = min(self.speed_modifier, 32.0)
             elif event.key == pygame.K_m:
                 self.draw_whole_track = not self.draw_whole_track
             elif event.key == pygame.K_p:
