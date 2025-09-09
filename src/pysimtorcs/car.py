@@ -30,17 +30,17 @@ STEER_MAX = 0.366519
 PHYSICS_GRAVITY = 9.81  # m/s^2
 PHYSICS_MASS = 1150.0  # kg
 PHYSICS_INERTIA_SCALE = 1.0  # Multiply by mass for inertia
-PHYSICS_CG_TO_FRONT_AXLE = 0.97  # Centre gravity to front axle
-PHYSICS_CG_TO_REAR_AXLE = 0.97  # Centre gravity to rear axle
+PHYSICS_CG_TO_FRONT_AXLE = 1.22  # Centre gravity to front axle
+PHYSICS_CG_TO_REAR_AXLE = 1.42  # Centre gravity to rear axle
 PHYSICS_CG_HEIGHT = 0.25  # Centre gravity height
-PHYSICS_TIRE_GRIP = 2.0  # How much grip tires have
+PHYSICS_TIRE_GRIP = 1.6  # How much grip tires have. Was originally 2.0
 PHYSICS_WEIGHT_TRANSFER = (
     0.2  # How much weight is transferred during acceleration/braking
 )
 PHYSICS_CORNER_STIFFNESS_FRONT = 5.0
 PHYSICS_CORNER_STIFFNESS_REAR = 5.2
-PHYSICS_AIR_RESIST = 2.5  # air resistance (* vel)
-PHYSICS_ROLL_RESIST = 8.0  # rolling resistance force (* vel)
+PHYSICS_AIR_RESIST = 0.4032 # 2.5  # air resistance (* vel)
+PHYSICS_ROLL_RESIST = 12.096 #8.0  # rolling resistance force (* vel)
 PHYSICS_INERTIA = PHYSICS_MASS * PHYSICS_INERTIA_SCALE
 PHYSICS_WHEEL_BASE = PHYSICS_CG_TO_FRONT_AXLE + PHYSICS_CG_TO_REAR_AXLE
 PHYSICS_AXLE_WEIGHT_RATIO_FRONT = (
