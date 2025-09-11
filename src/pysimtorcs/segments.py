@@ -101,6 +101,10 @@ class Segment:
         self.y_min: float = float("inf")
         self.y_max: float = float("-inf")
 
+        # Physical properties
+        self.rolling_resistance: float = 0.01
+        # Other? Friction, downforce, etc.
+
     def update_segment_lines(self):
         """Creates / Updates the segment lines for this segment."""
         self.segment_lines.clear()

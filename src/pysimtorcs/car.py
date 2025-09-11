@@ -40,7 +40,11 @@ PHYSICS_WEIGHT_TRANSFER = (
 PHYSICS_CORNER_STIFFNESS_FRONT = 5.0
 PHYSICS_CORNER_STIFFNESS_REAR = 5.2
 PHYSICS_AIR_RESIST = 0.4032 # 2.5  # air resistance (* vel)
-PHYSICS_ROLL_RESIST = 12.096 #8.0  # rolling resistance force (* vel)
+# PHYSICS_ROLL_RESIST = 8.0 # FROM NOW ON COMPUTED DIFFERNETLY  # rolling resistance force (* vel)
+
+PHYSICS_NORMAL_FORCE = PHYSICS_MASS * PHYSICS_GRAVITY # [kg * m/s^2 = N]
+
+
 PHYSICS_INERTIA = PHYSICS_MASS * PHYSICS_INERTIA_SCALE
 PHYSICS_WHEEL_BASE = PHYSICS_CG_TO_FRONT_AXLE + PHYSICS_CG_TO_REAR_AXLE
 PHYSICS_AXLE_WEIGHT_RATIO_FRONT = (
@@ -264,15 +268,20 @@ class Car:
         traction_force_cx = throttle - brake * sign(self.velocity_local.x)
         traction_force_cy = 0.0
 
+        rolling_resistance_force = PHYSICS_NORMAL_FORCE * self.current_segment.rolling_resistance if self.current_segment is not None else 0.0
+
         # Drag and rolling resistance forces (N)
         drag_force_cx = (
-            -PHYSICS_ROLL_RESIST * self.velocity_local.x
+            # -PHYSICS_ROLL_RESIST * self.velocity_local.x
             - PHYSICS_AIR_RESIST * self.velocity_local.x * abs(self.velocity_local.x)
+            -rolling_resistance_force
         )
         drag_force_cy = (
-            -PHYSICS_ROLL_RESIST * self.velocity_local.y
+            # -PHYSICS_ROLL_RESIST * self.velocity_local.y
             - PHYSICS_AIR_RESIST * self.velocity_local.y * abs(self.velocity_local.y)
+            -rolling_resistance_force
         )
+
 
         # Total force in local car coordinates (N)
         total_force_cx = drag_force_cx + traction_force_cx

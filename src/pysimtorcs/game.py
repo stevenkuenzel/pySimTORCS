@@ -388,7 +388,7 @@ class GameGUI:
             pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 3)
             pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 202, 1)
 
-            for direction in directions:
+            for i, direction in enumerate(directions):
                 start_x = center_x + direction.x * 5
                 start_y = center_y + direction.y * 5
                 end_x = center_x + direction.x * 200
@@ -397,7 +397,7 @@ class GameGUI:
                     self._display_surf, BLACK, (start_x, start_y), (end_x, end_y), 1
                 )
                 # Draw the length
-                length = lengths[directions.index(direction)]
+                length = lengths[i]
                 length_x = center_x + direction.x * length * 200
                 length_y = center_y + direction.y * length * 200
                 pygame.draw.circle(self._display_surf, RED, (length_x, length_y), 3)
