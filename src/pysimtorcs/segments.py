@@ -5,6 +5,7 @@ from math import atan2
 from pysimtorcs.geometry import LineSegment, create_vector2_from_rad
 from pygame.math import Vector2
 
+
 class TurnDirection(Enum):
     Left = 1
     Right = 2
@@ -156,6 +157,22 @@ class Segment:
     def to_polygon(self) -> list[Vector2]:
         return [self.p3, self.p1, self.p2, self.p4]  # , self.p3]
 
+    def get_polygon_numpy(self) -> tuple:
+        """
+        Get polygon vertices as cached NumPy arrays for fast Numba access.
+
+        Returns:
+            Tuple of (polygon_x, polygon_y) as NumPy float64 arrays
+        """
+        # Check if cached
+        if not hasattr(self, "_polygon_x_cache"):
+            import numpy as np
+
+            polygon = self.to_polygon()
+            self._polygon_x_cache = np.array([v.x for v in polygon], dtype=np.float64)
+            self._polygon_y_cache = np.array([v.y for v in polygon], dtype=np.float64)
+        return self._polygon_x_cache, self._polygon_y_cache
+
     def get_bbox(self) -> tuple[float, float, float, float]:
         """Returns the bounding box of the segment.
 
@@ -224,8 +241,8 @@ class EdgeSegment(Segment):
         self.turn_direction: TurnDirection = turn_direction
 
         # DO NOT COPY POINTS HERE. USE REFERENCES.
-        self.p1 = from_segment.p3#.copy()
-        self.p2 = from_segment.p4#.copy()
+        self.p1 = from_segment.p3  # .copy()
+        self.p2 = from_segment.p4  # .copy()
 
         if turn_direction == TurnDirection.Right:
             self.p3 = self.p1
@@ -290,7 +307,7 @@ class CoordinateSegment(Segment):
             _from = self.p1 if self.turn_direction == TurnDirection.Right else self.p2
             _to = self.p2 if self.turn_direction == TurnDirection.Right else self.p1
             vec = _to - _from
-            vec_rot = _from + vec.rotate_rad(self.turn_angle)# * 180.0 / math.pi)
+            vec_rot = _from + vec.rotate_rad(self.turn_angle)  # * 180.0 / math.pi)
 
             if self.turn_direction == TurnDirection.Right:
                 self.p2 = vec_rot

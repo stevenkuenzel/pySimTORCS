@@ -184,7 +184,7 @@ class Track:
         return [segment.length_measured / self.length for segment in self.segments]
 
 
-def import_from_torcs(name, level_of_detail: int = 1) -> Track:
+def import_from_torcs(name : str, level_of_detail: int = 1) -> Track:
     invert: bool = name.startswith("!")
     if invert:
         name = name[1:]

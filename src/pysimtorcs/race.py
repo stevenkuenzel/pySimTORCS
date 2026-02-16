@@ -1,21 +1,25 @@
 import math
 from random import Random
+import numpy as np
 
 import pysimtorcs.settings as settings
 from pysimtorcs.car import Car
 from pysimtorcs.controller import CarController, TestController
-from pysimtorcs.geometry import (
-    adjacent_point_on_segment,
-    point_within_polygon,
-)
 from pysimtorcs.segments import Segment
 from pysimtorcs.sensor import SensorInformation
 from pysimtorcs.track import Track
 from pysimtorcs.util import sign
+from pysimtorcs import numba_geometry, numba_physics
 
 
 class Race:
-    def __init__(self, track: Track, noise: bool, random : Random = None, time_max_sec: float = 300):
+    def __init__(
+        self,
+        track: Track,
+        noise: bool,
+        random: Random = None,
+        time_max_sec: float = 300,
+    ):
         self.track = track
         self.noise = noise
         self.random = random
@@ -24,7 +28,7 @@ class Race:
         self.cars: list[Car] = []
         self.race_finished = False
 
-    def run(self, fps : int = settings.FPS):
+    def run(self, fps: int = settings.FPS):
         DT = 1.0 / fps
         while self.time_now < self.time_max_sec and not self.race_finished:
             self.update(DT)
@@ -49,14 +53,8 @@ class Race:
         for car in self.cars:
             if car.disqualified:
                 continue
-            # max_pos = self.time_now * STEER_MAX
-            # print("Steering total:", car.sensor_information.total_steering, " of ", max_pos)
-            
 
-            self.__update_car_state(car)
-
-            car.update(dt, self.track.length)
-
+            self.__update_car_state(car, dt)
 
         if all(car.disqualified for car in self.cars):
             self.race_finished = True
@@ -66,7 +64,10 @@ class Race:
         if self.time_now >= self.time_max_sec:
             self.race_finished = True
 
-    def __update_car_state(self, car: Car) -> None:
+    def __update_car_state(self, car: Car, dt: float) -> None:
+        # Get controller input and update fitness
+        car.update(dt, self.track.length)
+
         sensor_info: SensorInformation = car.sensor_information
         sensor_info.absolute_velocity = car.absolute_velocity
 
@@ -111,11 +112,22 @@ class Race:
                 - (segment.center_end.y - segment.center_start.y)
                 * (car.position.x - segment.center_start.x)
             )
-            projected_on_axis = (
-                car.position
-                if det_axis == 0
-                else adjacent_point_on_segment(car.position, segment.axis)
-            )
+            # Use Numba-optimized adjacent_point_on_segment
+            if det_axis == 0:
+                projected_x, projected_y = car.position.x, car.position.y
+            else:
+                projected_x, projected_y = numba_geometry.adjacent_point_on_segment(
+                    car.position.x,
+                    car.position.y,
+                    segment.axis.from_point.x,
+                    segment.axis.from_point.y,
+                    segment.axis.to_point.x,
+                    segment.axis.to_point.y,
+                )
+            # Create a simple object to mimic Vector2 for distance calculation
+            from pygame import Vector2
+
+            projected_on_axis = Vector2(projected_x, projected_y)
             sensor_info.segment_position = segment.center_start.distance_to(
                 projected_on_axis
             )
@@ -152,13 +164,14 @@ class Race:
 
     def __determine_car_segment(self, car: Car) -> None:
         segments_to_check = self.track.grid.get_segments_at_position(car.position)
-        # segments_to_check = self.__segment_indices_to_check(car)
 
         for segment in segments_to_check:
-            # for segment_id in segments_to_check:
-            # segment = self.track.segments[segment_id]
+            # Use cached NumPy polygons for faster Numba access
+            polygon_x, polygon_y = segment.get_polygon_numpy()
 
-            if point_within_polygon(car.position, segment.to_polygon()):
+            if numba_physics.point_within_polygon(
+                car.position.x, car.position.y, polygon_x, polygon_y
+            ):
                 car.current_segment = segment
                 return
 
@@ -174,8 +187,6 @@ class Race:
     #     # Ensure indices are within valid range using modulo for wrap-around
     #     return [i % num_segments for i in indices]
 
-    
-    
     def __update_track_edge_sensors(self, car: Car) -> list[float]:
         if car.disqualified:
             return []
@@ -188,11 +199,15 @@ class Race:
         segments = self.track.segments
         num_segments = len(segments)
 
-        car_pos = car.position
+        car_pos_x = car.position.x
+        car_pos_y = car.position.y
         current_seg_idx = car.current_segment.id
 
         for index, sensor in enumerate(sensors):
-            sensor_to = car_pos + sensor * sensor_range
+            # Convert sensor vector to scalar
+            sensor_x = sensor.x
+            sensor_y = sensor.y
+
             d_min = sensor_range
             found = False
 
@@ -206,10 +221,21 @@ class Race:
                 total_distance += seg_length
 
                 for line in segment.segment_lines:
-                    intersection = line.intersects(car_pos, sensor_to)
-                    if intersection is not None:
+                    # Use Numba-optimized find_line_intersection_distance
+                    dist = numba_physics.find_line_intersection_distance(
+                        car_pos_x,
+                        car_pos_y,
+                        sensor_x,
+                        sensor_y,
+                        sensor_range,
+                        line.from_point.x,
+                        line.from_point.y,
+                        line.to_point.x,
+                        line.to_point.y,
+                    )
+                    if dist < sensor_range:
                         found = True
-                        d_min = car_pos.distance_to(intersection)
+                        d_min = dist
                         break
                 if found:
                     break

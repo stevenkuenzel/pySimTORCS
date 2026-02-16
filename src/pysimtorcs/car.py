@@ -7,6 +7,7 @@ from pysimtorcs.controller import CarController
 from pysimtorcs.segments import Segment, Turn
 from pysimtorcs.sensor import SensorInformation
 from pysimtorcs.util import clamp, sign
+from pysimtorcs import numba_physics
 import numpy as np
 
 RANGE_TRACK_EDGE_SENSOR_LEFT = -45
@@ -39,8 +40,8 @@ PHYSICS_WEIGHT_TRANSFER = (
 )
 PHYSICS_CORNER_STIFFNESS_FRONT = 5.0
 PHYSICS_CORNER_STIFFNESS_REAR = 5.2
-PHYSICS_AIR_RESIST = 0.4032 # 2.5  # air resistance (* vel)
-PHYSICS_ROLL_RESIST = 12.096 #8.0  # rolling resistance force (* vel)
+PHYSICS_AIR_RESIST = 0.4032  # 2.5  # air resistance (* vel)
+PHYSICS_ROLL_RESIST = 12.096  # 8.0  # rolling resistance force (* vel)
 PHYSICS_INERTIA = PHYSICS_MASS * PHYSICS_INERTIA_SCALE
 PHYSICS_WHEEL_BASE = PHYSICS_CG_TO_FRONT_AXLE + PHYSICS_CG_TO_REAR_AXLE
 PHYSICS_AXLE_WEIGHT_RATIO_FRONT = (
@@ -100,14 +101,14 @@ class Car:
         self.acceleration = Vector2()
         self.acceleration_local = Vector2()
         self.absolute_velocity = 0.0
-        self.previous_absolute_velocity = 0.0 # For Fitness.
+        self.previous_absolute_velocity = 0.0  # For Fitness.
         self.yaw_rate = 0.0
 
         # ABS flag.
         self.last_brake_loosened = True
 
-
     def update(self, dt: float, track_length: float):
+        """Update controller input, fitness info, and physics."""
         input = self.controller.control(self.sensor_information)
         target_steer = input.left - input.right
 
@@ -192,145 +193,59 @@ class Car:
         # pygame.Vector2 does not support bulk creation, but we can use list comprehension efficiently
         return [Vector2(xi, yi) for xi, yi in zip(x, y)]
 
-
     def update_physics(self, dt: float):
-        # Calculate sine and cosine of heading for coordinate transforms
-        sn = math.sin(self.heading)
-        cs = math.cos(self.heading)
+        """Update car physics using Numba-compiled physics engine."""
+        # Call the compiled physics function
+        (
+            new_heading,
+            new_velocity_x,
+            new_velocity_y,
+            new_yaw_rate,
+            position_dx,
+            position_dy,
+            new_absolute_velocity,
+        ) = numba_physics.update_physics_step(
+            self.heading,
+            self.velocity.x,
+            self.velocity.y,
+            self.yaw_rate,
+            self.throttle,
+            self.brake,
+            self.steer_angle,
+            dt,
+        )
 
-        # Transform velocity to local car coordinates (m/s)
+        # Update state variables
+        self.heading = new_heading
+        self.velocity.x = new_velocity_x
+        self.velocity.y = new_velocity_y
+        self.yaw_rate = new_yaw_rate
+        self.previous_absolute_velocity = self.absolute_velocity
+        self.absolute_velocity = new_absolute_velocity
+
+        # Update position
+        self.position.x += position_dx
+        self.position.y += position_dy
+
+        # Update local velocity for sensor readings
+        cs = math.cos(self.heading)
+        sn = math.sin(self.heading)
         self.velocity_local.x = cs * self.velocity.x + sn * self.velocity.y
         self.velocity_local.y = cs * self.velocity.y - sn * self.velocity.x
 
-        # Calculate axle weights (N)
-        axle_weight_front = PHYSICS_MASS * (
-            PHYSICS_AXLE_WEIGHT_RATIO_FRONT * PHYSICS_GRAVITY
-            - PHYSICS_WEIGHT_TRANSFER
-            * self.acceleration_local.x
-            * PHYSICS_CG_HEIGHT
-            / PHYSICS_WHEEL_BASE
-        )
-        axle_weight_rear = PHYSICS_MASS * (
-            PHYSICS_AXLE_WEIGHT_RATIO_REAR * PHYSICS_GRAVITY
-            + PHYSICS_WEIGHT_TRANSFER
-            * self.acceleration_local.x
-            * PHYSICS_CG_HEIGHT
-            / PHYSICS_WHEEL_BASE
-        )
-
-        # Calculate yaw speeds at front and rear axles (rad/s)
-        yaw_speed_front = PHYSICS_CG_TO_FRONT_AXLE * self.yaw_rate
-        yaw_speed_rear = -PHYSICS_CG_TO_REAR_AXLE * self.yaw_rate
-
-        # Calculate slip angles (rad)
-        slip_angle_front = (
-            math.atan2(
-                self.velocity_local.y + yaw_speed_front, abs(self.velocity_local.x)
-            )
-            - sign(self.velocity_local.x) * self.steer_angle
-        )
-        slip_angle_rear = math.atan2(
-            self.velocity_local.y + yaw_speed_rear, abs(self.velocity_local.x)
-        )
-
-        # Tire grip coefficients (unitless)
-        tire_grip_front = PHYSICS_TIRE_GRIP
-        tire_grip_rear = PHYSICS_TIRE_GRIP
-
-        # Lateral friction forces at front and rear tires (N)
-        friction_force_front_cy = (
-            clamp(
-                -PHYSICS_CORNER_STIFFNESS_FRONT * slip_angle_front,
-                -tire_grip_front,
-                tire_grip_front,
-            )
-            * axle_weight_front
-        )
-        friction_force_rear_cy = (
-            clamp(
-                -PHYSICS_CORNER_STIFFNESS_REAR * slip_angle_rear,
-                -tire_grip_rear,
-                tire_grip_rear,
-            )
-            * axle_weight_rear
-        )
-
-        # Get brake and throttle forces (N)
-        brake = self.brake * PHYSICS_BRAKE_FORCE
-        throttle = self.throttle * PHYSICS_ENGINE_FORCE
-
-        # Traction forces (N)
-        # Only rear wheel drive (RWD) is modeled
-        traction_force_cx = throttle - brake * sign(self.velocity_local.x)
-        traction_force_cy = 0.0
-
-        # Drag and rolling resistance forces (N)
-        drag_force_cx = (
-            -PHYSICS_ROLL_RESIST * self.velocity_local.x
-            - PHYSICS_AIR_RESIST * self.velocity_local.x * abs(self.velocity_local.x)
-        )
-        drag_force_cy = (
-            -PHYSICS_ROLL_RESIST * self.velocity_local.y
-            - PHYSICS_AIR_RESIST * self.velocity_local.y * abs(self.velocity_local.y)
-        )
-
-        # Total force in local car coordinates (N)
-        total_force_cx = drag_force_cx + traction_force_cx
-        # Lateral force includes tire friction and drag
-        total_force_cy = (
-            drag_force_cy
-            + traction_force_cy
-            + math.cos(self.steer_angle) * friction_force_front_cy
-            + friction_force_rear_cy
-        )
-
-        # Acceleration in local car coordinates (m/s^2)
+        # Update acceleration for fitness calculation (simplified estimate)
         self.acceleration_local.x = (
-            total_force_cx / PHYSICS_MASS
-        )  # forward / reverse acceleration
+            (new_velocity_x - self.velocity.x) / dt if dt > 0 else 0.0
+        )
         self.acceleration_local.y = (
-            total_force_cy / PHYSICS_MASS
-        )  # lateral acceleration
-
-        # Transform acceleration to world coordinates (m/s^2)
+            (new_velocity_y - self.velocity.y) / dt if dt > 0 else 0.0
+        )
         self.acceleration.x = (
             cs * self.acceleration_local.x - sn * self.acceleration_local.y
         )
         self.acceleration.y = (
             sn * self.acceleration_local.x + cs * self.acceleration_local.y
         )
-
-        # Update velocity in world coordinates (m/s)
-        self.velocity.x += self.acceleration.x * dt
-        self.velocity.y += self.acceleration.y * dt
-
-        # Calculate absolute velocity (m/s)
-        self.previous_absolute_velocity = self.absolute_velocity
-        self.absolute_velocity = self.velocity.length()
-
-        # Calculate rotational (yaw) torque (N*m)
-        angular_torque = (
-            friction_force_front_cy + traction_force_cy
-        ) * PHYSICS_CG_TO_FRONT_AXLE - friction_force_rear_cy * PHYSICS_CG_TO_REAR_AXLE
-
-        # Stop the car if velocity is very low and no throttle is applied
-        if abs(self.absolute_velocity) < 0.5 and throttle == 0.0:
-            self.velocity.x = 0.0
-            self.velocity.y = 0.0
-            self.absolute_velocity = 0.0
-            angular_torque = 0.0
-            self.yaw_rate = 0.0
-
-        # Calculate angular acceleration (rad/s^2)
-        angular_accel = angular_torque / PHYSICS_INERTIA
-
-        # Update yaw rate (rad/s) and heading (rad)
-        self.yaw_rate += angular_accel * dt
-        self.heading += self.yaw_rate * dt
-
-        # Update position in world coordinates (m)
-        self.position.x += self.velocity.x * dt
-        self.position.y += self.velocity.y * dt
 
         # Accumulate total distance for statistics (m)
         self.distance_moved += self.absolute_velocity * dt
