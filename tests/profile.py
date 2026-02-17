@@ -1,5 +1,6 @@
 from pysimtorcs import settings
 from pysimtorcs.controller import TestController
+from pysimtorcs.game import Game
 from pysimtorcs.track import Track, import_from_torcs
 from pysimtorcs.race import Race
 
@@ -18,3 +19,5 @@ while race.time_max_sec > race.time_now and not race.race_finished:
     race.update(1.0 / fps)
 
 print("Time elapsed:", race.time_now, "sec")
+
+game: Game = Game("Brondehach", TestController(15.0), False, 300)

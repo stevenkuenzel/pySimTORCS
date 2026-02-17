@@ -1,4 +1,5 @@
 from math import atan2, cos, hypot, sin
+import math
 
 import pygame
 from pygame.locals import *
@@ -81,7 +82,7 @@ class GameGUI:
                 self.speed_modifier = max(self.speed_modifier, 0.125)
             elif event.key == pygame.K_d:
                 self.speed_modifier *= 2.0
-                self.speed_modifier = min(self.speed_modifier, 32.0)
+                self.speed_modifier = min(self.speed_modifier, 16.0)
             elif event.key == pygame.K_m:
                 self.draw_whole_track = not self.draw_whole_track
             elif event.key == pygame.K_p:
@@ -325,7 +326,10 @@ class GameGUI:
             )
             text_y += 30
             self.write_text(
-                f"  Heading: {car.heading:.2f} rad", text_x + 10, text_y, 24
+                f"  Heading: {(car.heading % (2 * math.pi)):.2f} rad",
+                text_x + 10,
+                text_y,
+                24,
             )
             text_y += 30
             self.write_text(
@@ -349,7 +353,7 @@ class GameGUI:
                 center_y = text_y + 250
 
                 arrow_start = Vector2(center_x, center_y)
-                arrow_direction = Vector2(car.steer_angle, -car.throttle) 
+                arrow_direction = Vector2(car.steer_angle, -car.throttle)
                 length_multiplier = 200
                 arrow_end = arrow_start + arrow_direction * length_multiplier
 
@@ -365,8 +369,9 @@ class GameGUI:
                     6,
                 )
 
-                pygame.draw.circle(self._display_surf, BLACK, (center_x, center_y), 200, 1)
-               
+                pygame.draw.circle(
+                    self._display_surf, BLACK, (center_x, center_y), 200, 1
+                )
 
                 return
 
@@ -451,7 +456,9 @@ class GameGUI:
 
 
 class Game:
-    def __init__(self, track_name: str, controller: CarController, noise: bool, time_max_sec : int):
+    def __init__(
+        self, track_name: str, controller: CarController, noise: bool, time_max_sec: int
+    ):
         self.track_name = track_name
         self.controller = controller
         self.time_max_sec = time_max_sec
